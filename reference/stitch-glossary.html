@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stitch 术语速查表</title>
+  <link rel="stylesheet" href="../assets/lesson.css">
+  <style>
+    .glossary-term {
+      margin: 1.25rem 0;
+      padding: 0.75rem 1rem;
+      border-left: 3px solid var(--accent);
+      background: var(--accent-light);
+      border-radius: 0 6px 6px 0;
+    }
+    .glossary-term h3 { margin: 0 0 0.15rem; font-size: 1.05rem; }
+    .glossary-term p { margin: 0.3rem 0; }
+    .glossary-term .see-also { font-size: 0.85rem; margin-top: 0.3rem; }
+  </style>
+</head>
+<body>
+
+<div class="lesson-header">
+  <div class="lesson-number">Reference</div>
+  <h1 class="lesson-title">Stitch 术语速查表</h1>
+  <p class="lesson-subtitle">Google Labs Stitch 的核心术语，随课程更新。</p>
+</div>
+
+<h2>基础概念</h2>
+
+<div class="glossary-term">
+  <h3>Stitch</h3>
+  <p>Google Labs 推出的免费 AI UI 设计工具。用自然语言描述界面，生成高保真设计稿并可导出为 Figma / HTML / React 代码。</p>
+</div>
+
+<div class="glossary-term">
+  <h3>Standard 模式</h3>
+  <p>基于 Gemini 3 Flash 的快速生成模式。支持 Figma 导出，每月 ~350 次。适合日常迭代。</p>
+</div>
+
+<div class="glossary-term">
+  <h3>Experimental 模式</h3>
+  <p>基于 Gemini 3 Pro 的高质量模式。支持图片/手绘输入，无 Figma 导出，每月 ~50 次。适合最终稿。</p>
+</div>
+
+<div class="glossary-term">
+  <h3>Vibe Design</h3>
+  <p>意图驱动的设计理念。描述"感觉和目标"而非组件列表，让 AI 诠释和发挥。如"一个感觉像周日早晨的冥想 app"。</p>
+</div>
+
+<div class="glossary-term">
+  <h3>Infinite Canvas（无限画布）</h3>
+  <p>Stitch 的无限画布空间，支持多屏共存、设计分支、交互原型连接。2026 年 3 月加入。</p>
+</div>
+
+<h2>技术概念</h2>
+
+<div class="glossary-term">
+  <h3>DESIGN.md</h3>
+  <p>开放标准的设计 Token 文件格式（Markdown）。定义颜色、字体、间距、组件规则。跨工具可导入/导出共享。</p>
+</div>
+
+<div class="glossary-term">
+  <h3>Stitch SDK</h3>
+  <p>TypeScript 库（<code>@google/stitch-sdk</code>），提供编程式 UI 生成。核心类：Stitch、Project、Screen、DesignSystem。</p>
+  <p class="see-also">参见：<a href="https://github.com/google-labs-code/stitch-sdk" target="_blank">GitHub</a></p>
+</div>
+
+<div class="glossary-term">
+  <h3>Stitch MCP</h3>
+  <p>Model Context Protocol 服务器，将 Stitch 的设计能力暴露给 AI 编码工具（Claude Code、Cursor、Gemini CLI 等）。</p>
+</div>
+
+<div class="glossary-term">
+  <h3>stitch-skills</h3>
+  <p>Google Labs 开源的 Agent 技能库，15+ 个技能分 3 个插件组（design/build/utilities）。在 Claude Code 中可直接安装使用。</p>
+  <p class="see-also">参见：<a href="https://github.com/google-labs-code/stitch-skills" target="_blank">GitHub</a></p>
+</div>
+
+<div class="glossary-term">
+  <h3>Anti-pattern（反模式）</h3>
+  <p>Stitch 提示词中应避免的设计元素，如紫色渐变、对称列布局、emoji 图标、抽象 3D 球体。明确告知 AI 可避免生成"AI 感"过重的设计。</p>
+</div>
+
+<h2>推荐链接</h2>
+<ul>
+  <li><a href="https://stitch.withgoogle.com" target="_blank">Stitch 官网</a></li>
+  <li><a href="https://stitch.withgoogle.com/docs" target="_blank">官方文档</a></li>
+  <li><a href="https://github.com/google-labs-code/stitch-sdk" target="_blank">Stitch SDK (GitHub)</a></li>
+  <li><a href="https://github.com/google-labs-code/stitch-skills" target="_blank">stitch-skills (GitHub)</a></li>
+</ul>
+
+</body>
+</html>

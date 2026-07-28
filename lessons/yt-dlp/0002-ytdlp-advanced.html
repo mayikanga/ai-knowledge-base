@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>yt-dlp L2: 进阶 — 播放列表、字幕、Cookies、配置</title>
+  <link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">yt-dlp · Lesson 2 / 2</div>
+  <h1 class="lesson-title">yt-dlp 进阶</h1>
+  <p class="lesson-subtitle">播放列表、字幕、Cookies、配置文件</p>
+</div>
+
+<blockquote>
+  L1 你学会了基本下载。这课深入<strong>实战场景</strong>——批量下载播放列表、下载字幕、用浏览器 Cookies 绕过限制、
+  写配置文件固化常用参数。
+</blockquote>
+
+<h2 id="playlist">播放列表处理</h2>
+<pre><code># 下载整个播放列表
+yt-dlp "播放列表URL"
+
+# 只下载前 5 个视频
+yt-dlp -I 1:5 "播放列表URL"
+
+# 下载第 3 到第 8 个
+yt-dlp -I 3:8 "播放列表URL"
+
+# 跳过前 2 个，下载后面所有
+yt-dlp -I "2:-1" "播放列表URL"
+
+# 只下载某几个特定视频
+yt-dlp -I "1,3,5" "播放列表URL"
+
+# 下载时不重新获取元数据（更快）
+yt-dlp --flat-playlist "播放列表URL"
+
+# 按序号命名文件
+yt-dlp -o "%(playlist_index)02d - %(title)s.%(ext)s" "播放列表URL"</code></pre>
+
+<h2 id="subs">字幕下载</h2>
+<pre><code># 下载英语字幕
+yt-dlp --write-subs --sub-langs en "URL"
+
+# 下载中文字幕
+yt-dlp --write-subs --sub-langs "zh-Hans,zh" "URL"
+
+# 下载自动生成的字幕
+yt-dlp --write-auto-subs --sub-langs "en,zh" "URL"
+
+# 嵌入字幕到视频文件
+yt-dlp --write-subs --sub-langs en --embed-subs "URL"
+
+# 只下载字幕不下视频
+yt-dlp --write-subs --sub-langs en --skip-download "URL"</code></pre>
+
+<h2 id="cookies">Cookies 认证</h2>
+<p>YouTube 等网站经常要求登录后才能下载某些内容。用浏览器 Cookies 解决：</p>
+<pre><code># 从 Chrome 读取 cookies（推荐）
+yt-dlp --cookies-from-browser chrome "URL"
+
+# 从 Firefox 读取
+yt-dlp --cookies-from-browser firefox "URL"
+
+# 从 Edge 读取
+yt-dlp --cookies-from-browser edge "URL"
+
+# 导出 cookies.txt 后再用（可以复用）
+yt-dlp --cookies-from-browser chrome --cookies cookies.txt "URL"
+# 以后直接用
+yt-dlp --cookies cookies.txt "URL"</code></pre>
+
+<div class="banner banner-warning">
+  <strong>⚠️ 403 错误？</strong>大概率是 cookies 过期了。重新用 <code>--cookies-from-browser chrome</code> 即可。
+</div>
+
+<h2 id="config">配置文件</h2>
+<p>把常用参数写进配置文件，每次自动生效：</p>
+
+<p><strong>全局配置</strong> — <code>%APPDATA%/yt-dlp/config.txt</code>（Windows）或 <code>~/.yt-dlp/config</code>（Linux/Mac）：</p>
+<pre><code># 默认下载最佳画质
+-f bestvideo[height<=1080]+bestaudio/best
+
+# 输出命名
+-o "%(uploader)s/%(title)s.%(ext)s"
+
+# 写入字幕
+--write-subs
+--sub-langs en,zh
+
+# 自动合并需用 ffmpeg
+--merge-output-format mp4
+
+# 忽略错误继续
+-i</code></pre>
+
+<h2 id="other">实用技巧</h2>
+<table>
+  <tr><th>场景</th><th>命令</th></tr>
+  <tr><td>更新 yt-dlp</td><td><code>yt-dlp -U</code> 或 <code>pip install -U yt-dlp</code></td></tr>
+  <tr><td>查看支持的网站</td><td><code>yt-dlp --list-extractors</code></td></tr>
+  <tr><td>只下载描述信息</td><td><code>yt-dlp --skip-download --write-description</code></td></tr>
+  <tr><td>下载缩略图</td><td><code>yt-dlp --write-thumbnail</code></td></tr>
+  <tr><td>限制下载速度</td><td><code>yt-dlp --limit-rate 2M</code></td></tr>
+  <tr><td>只下载某段时间</td><td><code>yt-dlp --download-sections "*10:00-20:00"</code></td></tr>
+  <tr><td>Bilibili 视频</td><td><code>yt-dlp "https://www.bilibili.com/video/BV1xx411c7mD"</code></td></tr>
+  <tr><td>Twitter/X 视频</td><td><code>yt-dlp "https://x.com/user/status/123456"</code></td></tr>
+</table>
+
+<h2 id="practice">动手练习</h2>
+<div class="exercise">
+  <h3>🎯 批量下载播放列表</h3>
+  <ol class="steps">
+    <li><strong>找一个播放列表</strong><p>找一个你感兴趣的 YouTube 播放列表。</p></li>
+    <li><strong>下载前 3 个视频</strong><pre><code>yt-dlp -I 1:3 -o "%(playlist_index)02d - %(title)s.%(ext)s" "播放列表URL"</code></pre></li>
+    <li><strong>加上字幕</strong><pre><code>yt-dlp -I 1:3 --write-subs --sub-langs "zh-Hans,en" -o "..." "播放列表URL"</code></pre></li>
+    <li><strong>创建配置文件</strong><p>把你常用的参数写进配置文件，以后直接 <code>yt-dlp "URL"</code> 就能用。</p></li>
+  </ol>
+</div>
+
+<h2>课后推荐阅读</h2>
+<ul>
+  <li><a href="https://github.com/yt-dlp/yt-dlp" target="_blank">GitHub 仓库</a> — 完整文档和 Wiki</li>
+  <li><a href="https://github.com/yt-dlp/yt-dlp/wiki/FAQ" target="_blank">FAQ</a> — 常见问题排查</li>
+  <li><a href="0001-ytdlp-basics.html">回顾 L1：yt-dlp 基础</a></li>
+</ul>
+
+<p>有任何问题随时问我！</p>
+<script src="../../assets/nav.js"></script>
+</body>
+</html>

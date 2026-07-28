@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lesson 2: Custom Skills — 可复用的指令包</title>
+  <link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">Lesson 2 / 6</div>
+  <h1 class="lesson-title">Custom Skills</h1>
+  <p class="lesson-subtitle">把你的工作流打包成可复用的指令包</p>
+</div>
+
+<blockquote>
+  Mission 关联：上一课你学会了让 Claude Code<em>自动执行</em>操作（hooks）。这一课你将学会把<strong>重复性的提示词和流程</strong>打包成
+  一个 <code>/你的命令</code> —— 再也不用每次都手打一整段需求了。
+</blockquote>
+
+<h2 id="skills-intro">什么是 Skill？</h2>
+
+<p>
+  Skill 是 Claude Code 的<strong>可复用指令包</strong>。一个 Skill 就是一个 <code>SKILL.md</code> 文件（以及可选的附属文件），
+  它教会 Claude 如何完成某个特定领域任务，并暴露为 slash command 供你随时调用。
+</p>
+
+<div class="info-box">
+  <strong>💡 Skill vs. CLAUDE.md</strong><br>
+  <code>CLAUDE.md</code> 是<strong>每次会话都加载</strong>的全局指令 —— 像操作系统的常驻进程。<br>
+  Skill 是<strong>按需调用</strong>的指令包 —— 像你在终端里敲的一个命令。只在需要时消耗上下文。
+</div>
+
+<h2 id="skills-location">Skill 的存放位置</h2>
+
+<table>
+  <tr>
+    <th>位置</th>
+    <th>作用域</th>
+    <th>特点</th>
+  </tr>
+  <tr>
+    <td><code>~/.claude/skills/&lt;name&gt;/SKILL.md</code></td>
+    <td>全局（所有项目）</td>
+    <td>你的个人技能库，走到哪用到哪</td>
+  </tr>
+  <tr>
+    <td><code>.claude/skills/&lt;name&gt;/SKILL.md</code></td>
+    <td>项目级别</td>
+    <td>可提交到仓库，团队共享</td>
+  </tr>
+  <tr>
+    <td><code>commands/&lt;name&gt;.md</code></td>
+    <td>单文件版（旧格式）</td>
+    <td>功能相同，但没有多文件结构。推荐用技能格式</td>
+  </tr>
+</table>
+
+<div class="banner banner-success">
+  <strong>📁 目录结构示例：</strong>
+<pre><code>.claude/skills/
+  deploy/
+    SKILL.md        ← 核心指令文件
+    reference/       ← 附属参考文件
+    templates/       ← 模板
+  code-review/
+    SKILL.md</code></pre>
+</div>
+
+<h2 id="skills-frontmatter">SKILL.md 的 Frontmatter</h2>
+
+<p>SKILL.md 的开头是 YAML frontmatter（<code>---</code> 包裹），定义了 skill 的元数据：</p>
+
+<table>
+  <tr>
+    <th>字段</th>
+    <th>必填？</th>
+    <th>说明</th>
+    <th>示例</th>
+  </tr>
+  <tr>
+    <td><code>name</code></td>
+    <td>✅</td>
+    <td>Skill 名称，也是 <code>/name</code> 的命令名</td>
+    <td><code>deploy</code></td>
+  </tr>
+  <tr>
+    <td><code>description</code></td>
+    <td>✅</td>
+    <td>一句话描述何时使用。Claude 据此自动发现和调用</td>
+    <td><code>Deploy the app to production</code></td>
+  </tr>
+  <tr>
+    <td><code>args</code></td>
+    <td>❌</td>
+    <td>定义参数名、类型、是否必填</td>
+    <td><code>[{name: "env", required: true}]</code></td>
+  </tr>
+  <tr>
+    <td><code>allowedTools</code></td>
+    <td>❌</td>
+    <td>允许使用的工具列表（免权限提示）</td>
+    <td><code>["Bash", "Read", "Edit"]</code></td>
+  </tr>
+  <tr>
+    <td><code>disallowed-tools</code></td>
+    <td>❌</td>
+    <td>拒绝使用的工具（v2.1.202+）</td>
+    <td><code>["Write"]</code></td>
+  </tr>
+  <tr>
+    <td><code>context</code></td>
+    <td>❌</td>
+    <td>设为 <code>fork</code> 在隔离 subagent 中运行</td>
+    <td><code>fork</code></td>
+  </tr>
+  <tr>
+    <td><code>model</code></td>
+    <td>❌</td>
+    <td>覆盖会话的模型设置</td>
+    <td><code>sonnet</code></td>
+  </tr>
+  <tr>
+    <td><code>user-invocable</code></td>
+    <td>❌</td>
+    <td>设为 <code>false</code> 只做后台知识，不暴露为命令</td>
+    <td><code>true</code></td>
+  </tr>
+  <tr>
+    <td><code>disable-model-invocation</code></td>
+    <td>❌</td>
+    <td>设为 <code>true</code> 阻止 Claude 自动调用</td>
+    <td><code>false</code></td>
+  </tr>
+  <tr>
+    <td><code>hooks</code></td>
+    <td>❌</td>
+    <td>作用域限定到此 skill 的 hooks</td>
+    <td><code>PreToolUse: ./skill-hooks/pre-check.sh</code></td>
+  </tr>
+</table>
+
+<h2 id="skills-content">SKILL.md 的内容部分</h2>
+
+<p>frontmatter 之后就是 markdown 正文，告诉 Claude 具体怎么做。你可以用一些特殊的语法：</p>
+
+<h3>参数引用</h3>
+<p>在命令体中使用 <code>$ARGUMENTS</code> 接收用户输入的参数：</p>
+
+<pre><code>---
+name: blog-outline
+description: "Create a structured blog outline"
+args:
+  - name: topic
+    required: true
+  - name: audience
+    required: true
+---
+You are a blog outline creator.
+
+Topic: $ARGUMENTS[1]
+Audience: $ARGUMENTS[2]
+
+Follow these steps:
+1. Read any style guides in /guides/
+2. Propose a 6-8 section outline with H2s and 2-3 bullets per section
+3. Save the outline to drafts/&lt;slug&gt;-outline.md</code></pre>
+
+<p>然后你就可以这样调用：</p>
+<pre><code>/blog-outline topic="Claude Code tips" audience="developers"</code></pre>
+
+<h3>Shell 注入</h3>
+<p>用 <code>!</code> 包裹的命令会被执行并将输出注入到 skill 的上下文中：</p>
+
+<pre><code>当前分支是：!git branch --show-current!</code></pre>
+
+<div class="banner banner-warning">
+  <strong>⚠️ 注意：</strong>Shell 注入在 skill 加载时执行，输出会直接变成 prompt 的一部分。
+</div>
+
+<h2 id="skills-types">三种 Skill 类型</h2>
+
+<table>
+  <tr>
+    <th>类型</th>
+    <th>用途</th>
+    <th>示例</th>
+  </tr>
+  <tr>
+    <td><strong>Reference Skill</strong></td>
+    <td>提供知识给 Claude，不主动干活</td>
+    <td>API 风格指南、项目约定</td>
+  </tr>
+  <tr>
+    <td><strong>Action Skill</strong></td>
+    <td>执行特定操作流程</td>
+    <td><code>/deploy</code> 执行部署检查清单</td>
+  </tr>
+  <tr>
+    <td><strong>Bundled Skill</strong></td>
+    <td>插件自带的技能包</td>
+    <td>从市场安装的插件中的 skill</td>
+  </tr>
+</table>
+
+<p><code>user-invocable: false</code> + <code>disable-model-invocation: true</code> 的 skill 就是纯 Reference Skill——提供知识但不暴露为命令。</p>
+
+<h2 id="skills-use">Skill 的调用方式</h2>
+
+<ol>
+  <li><strong>Slash command：</strong><code>/skill-name arg1="value"</code></li>
+  <li><strong>自动发现：</strong>Claude 在会话启动时加载所有 skill 的 <code>description</code>，当任务匹配时自动调用</li>
+  <li><strong>Skill Stacking（v2.1.199+）：</strong>多个技能同时激活</li>
+</ol>
+
+<h2 id="skills-practice">动手练习：创建一个实用的 Skill</h2>
+
+<div class="exercise">
+  <h3>🎯 练习：写一个 <code>/git-cleanup</code> Skill</h3>
+
+  <p><strong>场景：</strong>你经常需要清理已合并的 Git 分支。把这个流程打包成一个 skill：</p>
+
+  <p><strong>步骤：</strong></p>
+
+  <ol class="steps">
+    <li>
+      <strong>创建目录结构</strong>
+      <p>在 <code>~/.claude/skills/</code> 下创建 <code>git-cleanup/SKILL.md</code>：</p>
+<pre><code>mkdir -p ~/.claude/skills/git-cleanup</code></pre>
+    </li>
+    <li>
+      <strong>编写 SKILL.md</strong>
+<pre><code>---
+name: git-cleanup
+description: "清理已合并的本地 Git 分支，保持仓库整洁"
+allowedTools: ["Bash"]
+---
+
+# Git 分支清理助手
+
+当前仓库路径：!pwd!
+
+## 步骤
+
+1. 先运行 `git fetch --prune` 同步远程分支状态
+2. 列出已合并到主分支的本地分支：
+   `git branch --merged main | grep -v "main\|master"`
+3. 逐个确认后删除（用 `git branch -d`）
+4. 最后运行 `git remote prune origin` 清理远程追踪引用
+
+## 注意事项
+
+- 永远不要删除当前所在分支
+- 优先用 `-d`（安全删除），不要用 `-D`（强制删除）
+- 删除前先问用户确认</code></pre>
+    </li>
+    <li>
+      <strong>测试</strong>
+      <p>在任意 git 仓库中启动 Claude Code，输入 <code>/git-cleanup</code>。看到 Claude 按你的 skill 执行了吗？</p>
+    </li>
+    <li>
+      <strong>改进：加上参数</strong>
+      <p>试试加上 <code>args</code> 让用户指定目标分支：</p>
+<pre><code>args:
+  - name: target-branch
+    required: false
+    default: main</code></pre>
+      <p>然后在正文中用 <code>$ARGUMENTS[1]</code> 或 <code>$1</code> 引用。</p>
+    </li>
+  </ol>
+</div>
+
+<h2 id="skills-best">Skill 的最佳实践</h2>
+
+<ul>
+  <li><strong>description 要精准</strong> —— Claude 根据它决定何时自动调用。模糊的描述 = Claude 在不该调的时候乱调</li>
+  <li><strong>能用 <code>context: fork</code> 就用</strong> —— 避免 skill 的输出污染主会话上下文</li>
+  <li><strong>限定 <code>allowedTools</code></strong> —— 按最小权限原则，只给 skill 需要的工具</li>
+  <li><strong>先手动测试</strong> —— 用 <code>/name</code> 调通后再信赖自动发现</li>
+  <li><strong>附带参考文件</strong> —— 把大段知识放到 <code>skills/name/reference/</code> 下，正文保持简洁</li>
+</ul>
+
+<h2 id="skills-compare">Reference Skill vs. Action Skill</h2>
+
+<p>两种 skill 的区别就在 frontmatter 的两个字段上：</p>
+
+<pre><code># ── Action Skill（用户可调用）──
+name: deploy
+description: "Deploy the app"
+user-invocable: true
+# ── Claude 也可能根据 description 自动触发 ──
+
+# ── Reference Skill（仅后台知识）──
+name: api-style
+description: "API design conventions for this project"
+user-invocable: false
+disable-model-invocation: true
+# ── 只提供知识，不出现在 slash commands 里 ──</code></pre>
+
+<div class="banner banner-success">
+  <strong>💡 学到了什么？</strong>
+  <ul>
+    <li>Skill 的本质：可复用的指令包，按需调用</li>
+    <li>SKILL.md 的 frontmatter 全部字段及含义</li>
+    <li>参数引用（$ARGUMENTS）和 Shell 注入（!command!）</li>
+    <li>三种 skill 类型：Action / Reference / Bundled</li>
+    <li>本地 vs 项目级 skill 的存放位置</li>
+    <li>Skill Stacking（多技能同时激活）</li>
+    <li>最佳实践：最小权限、fork 隔离、精准 description</li>
+  </ul>
+</div>
+
+<h2 id="skills-challenge">额外挑战：skill + hook 联动</h2>
+
+<p>还记得上节课的 hooks 吗？Skill 的 frontmatter 也可以声明 <code>hooks</code>：</p>
+
+<pre><code>---
+name: dangerous-task
+hooks:
+  PreToolUse: ./skill-hooks/extra-check.sh
+---
+# 某个可能危险的任务...</code></pre>
+
+<p>这意味着你可以给<strong>特定的 skill</strong> 加上额外安全检查，而不影响全局的 hook 配置。试试把你上节课的"破坏性操作守卫"绑定到某个特定 skill 上？</p>
+
+<h2 id="skills-reading">课后推荐阅读</h2>
+
+<ul>
+  <li><a href="https://code.claude.com/docs/en/claude-directory" target="_blank">官方：Explore the .claude directory</a></li>
+  <li><a href="https://code.claude.com/docs/en/features-overview" target="_blank">官方：Extend Claude Code — Skills 部分</a></li>
+  <li><a href="../reference/glossary.html">术语速查表</a></li>
+</ul>
+
+<h2>📌 别忘了</h2>
+<p>有任何不清楚的随时问我！比如参数语法、frontmatter 字段的细节、或者技能设计的建议。</p>
+
+<p>学完这课后可以创建你自己的实用 skill 了——以后每次想复用某个工作流，就把它打包成一个 <code>/你取的名字</code>！</p>
+
+<script>
+  (() => { const button = document.querySelector('.course-nav__toggle'); button.addEventListener('click', () => { const collapsed = document.body.classList.toggle('nav-collapsed'); button.setAttribute('aria-expanded', String(!collapsed)); button.setAttribute('aria-label', collapsed ? '展开目录' : '收起目录'); }); })();
+</script>
+<script src="../assets/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stitch L3: DESIGN.md — 设计系统即代码</title>
+  <link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">Stitch · Lesson 3 / 6</div>
+  <h1 class="lesson-title">DESIGN.md</h1>
+  <p class="lesson-subtitle">设计系统即代码</p>
+</div>
+
+<blockquote>
+  L2 你学会了写好的提示词。但你有没有想过：每次写提示词都要重复一堆颜色、风格、字体信息，很烦？
+  DESIGN.md 就是解决这个问题的——把你的设计风格<strong>固化为一个可复用的标准文件</strong>，一次定义，到处应用。
+</blockquote>
+
+<h2 id="designmd-intro">什么是 DESIGN.md？</h2>
+
+<p>
+  DESIGN.md 是 Google Labs 发起的一个<strong>开放标准</strong>，用 Markdown 格式描述设计系统的核心 Token——颜色、字体、间距、组件规则。
+  它和 Claude Code 的 CLAUDE.md 是同一个思路：把元知识写进一个标准文件，让 AI 工具理解并遵守。
+</p>
+
+<div class="info-box">
+  <strong>💡 类比</strong>
+  <p><strong>CLAUDE.md</strong> 是给 Claude Code 看的项目规范 → 告诉 AI "代码怎么写"<br>
+  <strong>DESIGN.md</strong> 是给 Stitch 看的设计规范 → 告诉 AI "设计怎么做"</p>
+  <p>而且 DESIGN.md 是<strong>跨工具</strong>的——Stitch、Claude Code、Gemini CLI、Cursor 都能用。</p>
+</div>
+
+<h2 id="designmd-format">DESIGN.md 格式</h2>
+
+<p>一个典型的 DESIGN.md 包含以下几个部分：</p>
+
+<pre><code># 项目名 — Design System
+
+## Colors
+
+### Primary
+- `#4361EE` — 主色（按钮、链接、强调）
+- `#3A56D4` — 主色 Hover
+
+### Neutral
+- `#1A1A2E` — 文字主色
+- `#F5F7FA` — 背景色
+- `#FFFFFF` — 卡片/面板背景
+
+### Semantic
+- `#2EC4B6` — 成功
+- `#FF9F1C` — 警告
+- `#E71D36` — 错误
+
+## Typography
+
+- 标题: `Inter`, 600, 2rem/1.75rem/1.5rem/1.25rem
+- 正文: `Inter`, 400, 1rem/0.875rem
+- 代码: `JetBrains Mono`, 400, 0.875rem
+
+## Spacing
+
+- 4px / 8px / 12px / 16px / 24px / 32px / 48px / 64px
+
+## Border Radius
+
+- 按钮: 8px
+- 卡片: 12px
+- 输入框: 6px
+
+## Shadows
+
+- 卡片阴影: `0 2px 8px rgba(0,0,0,0.08)`
+- 下拉菜单: `0 4px 16px rgba(0,0,0,0.12)`
+
+## Components
+
+### Button
+- Primary: 背景 #4361EE, 文字白色, 圆角 8px, padding 12px 24px
+- Secondary: 边框 1px solid #4361EE, 文字 #4361EE, 背景透明
+- Ghost: 无背景无边框, 文字 #4361EE
+
+### Input
+- 边框: 1px solid #D0D0DD
+- Focus: 边框 #4361EE, 阴影 0 0 0 3px rgba(67,97,238,0.15)
+- 圆角: 6px</code></pre>
+
+<h2 id="designmd-three">三种使用方式</h2>
+
+<table>
+  <tr>
+    <th>方式</th>
+    <th>怎么做</th>
+    <th>适用场景</th>
+  </tr>
+  <tr>
+    <td><strong>1. 手动创建 + 上传</strong></td>
+    <td>写一个 DESIGN.md 文件，在 Stitch 中通过设计系统面板导入</td>
+    <td>有现成设计规范的项目</td>
+  </tr>
+  <tr>
+    <td><strong>2. 从 URL 提取</strong></td>
+    <td>Stitch 会自动分析任意网站的 CSS，提取配色和字体</td>
+    <td>参考竞品或灵感站点</td>
+  </tr>
+  <tr>
+    <td><strong>3. 从源码提取</strong></td>
+    <td>使用 <code>stitch::extract-design-md</code> skill 从前端代码中自动提取</td>
+    <td>已有前端项目（和 Claude Code 配合使用）</td>
+  </tr>
+</table>
+
+<h2 id="designmd-apply">如何应用到屏幕</h2>
+
+<p>有了 DESIGN.md 后，在 Stitch 中：</p>
+
+<ol>
+  <li><strong>创建设计系统</strong> — 在项目面板中导入或创建 DESIGN.md</li>
+  <li><strong>应用到屏幕</strong> — 选择目标屏幕，点击"应用设计系统"</li>
+  <li><strong>生成时自动遵循</strong> — 提示词中不再需要重复颜色/字体，只需说"按设计系统风格"</li>
+</ol>
+
+<div class="banner banner-success">
+  <strong>💡 这就是 DESIGN.md 的威力：</strong>
+  <p>有了它后你的提示词可以简化为：</p>
+  <pre><code>按照当前设计系统，为 TaskFlow 生成一个用户设置页面
+包含：个人资料编辑、密码修改、通知偏好</code></pre>
+  <p>不再需要写颜色、字体、间距——DESIGN.md 已经定义了。</p>
+</div>
+
+<h2 id="designmd-claude">和 Claude Code 的联动</h2>
+
+<p>
+  Stitch 的 <code>stitch::extract-design-md</code> skill 可以从你现有的前端代码中自动提取 DESIGN.md 文件。
+  你在 Claude Code 中运行这个 skill，它分析你的 Tailwind 配置、CSS 变量、组件代码，生成一份完整的 DESIGN.md。
+</p>
+
+<ul>
+  <li>然后把这份 DESIGN.md 导入 Stitch → 所有新设计自动遵循你现有的设计规范</li>
+  <li>或者在 Stitch 中改完设计后导出 DESIGN.md → 让 Claude Code 更新前端代码的 CSS 变量</li>
+</ul>
+
+<div class="info-box">
+  <strong>💡 设计 ⇄ 代码 双向同步</strong>
+  <p><strong>代码 → 设计：</strong>Claude Code 从源码提取 DESIGN.md → Stitch 导入 → 新设计遵循现有风格</p>
+  <p><strong>设计 → 代码：</strong>Stitch 改设计 → 导出 DESIGN.md → Claude Code 更新 CSS 变量</p>
+  <p>这个双向流程是 Stitch + Claude Code 集成的核心价值，L5 会深入讲。</p>
+</div>
+
+<h2 id="designmd-practice">动手练习</h2>
+
+<div class="exercise">
+  <h3>🎯 练习：创建你的第一个 DESIGN.md</h3>
+
+  <p><strong>场景：</strong>为你的个人项目创建一份设计系统文件。</p>
+
+  <p><strong>步骤：</strong></p>
+
+  <ol class="steps">
+    <li>
+      <strong>用 Stitch 从 URL 提取</strong>
+      <p>在 Stitch 中新建项目 → 设计系统面板 → "从 URL 导入" → 输入你喜欢的网站（比如 <code>linear.app</code> 或 <code>cal.com</code>）</p>
+      <p>Stitch 会自动分析它的配色和字体，生成一个初始 DESIGN.md。</p>
+    </li>
+    <li>
+      <strong>手动调整</strong>
+      <p>修改 DESIGN.md，把你的品牌色加进去，调整你认为不合适的值。</p>
+    </li>
+    <li>
+      <strong>应用到屏幕</strong>
+      <p>写一个提示词生成新屏幕，然后应用设计系统看看变化。</p>
+    </li>
+    <li>
+      <strong>对比效果</strong>
+      <p>生成同一个页面：</p>
+      <ul>
+        <li>有 DESIGN.md 时："按设计系统生成登录页面"</li>
+        <li>无 DESIGN.md 时：手动写所有颜色字体</li>
+      </ul>
+      <p>体验效率差距。</p>
+    </li>
+  </ol>
+</div>
+
+<h2 id="designmd-stitch-skills">相关 Skill</h2>
+
+<table>
+  <tr>
+    <th>Skill 名称</th>
+    <th>作用</th>
+  </tr>
+  <tr>
+    <td><code>stitch::manage-design-system</code></td>
+    <td>上传 DESIGN.md 并将主题应用到屏幕</td>
+  </tr>
+  <tr>
+    <td><code>stitch::extract-design-md</code></td>
+    <td>从前端代码中自动提取 DESIGN.md（需 Claude Code）</td>
+  </tr>
+  <tr>
+    <td><code>design-md</code></td>
+    <td>分析 Stitch 项目并生成语义化的 DESIGN.md</td>
+  </tr>
+  <tr>
+    <td><code>taste-design</code></td>
+    <td>生成实施"高级、反通用 UI 标准"的 DESIGN.md</td>
+  </tr>
+</table>
+
+<h2 id="designmd-summary">本课关键要点</h2>
+
+<div class="banner banner-success">
+  <strong>💡 核心记忆点</strong>
+  <ul>
+    <li>DESIGN.md = 设计系统的"代码化"标准，和 CLAUDE.md 是同一思路</li>
+    <li>包含：颜色、字体、间距、圆角、阴影、组件规范</li>
+    <li>三种使用方式：手动创建、从 URL 提取、从源码提取</li>
+    <li>一次定义 → 所有屏幕、所有提示词自动遵循</li>
+    <li>和 Claude Code 可以双向同步（设计 ⇄ 代码）</li>
+  </ul>
+</div>
+
+<h2>课后推荐阅读</h2>
+
+<ul>
+  <li><a href="0002-stitch-prompt.html">回顾 L2：提示词工程</a></li>
+  <li><a href="https://stitch.withgoogle.com" target="_blank">Stitch 官网</a> — 亲自试试设计系统面板</li>
+  <li><a href="https://github.com/google-labs-code/stitch-skills" target="_blank">stitch-skills GitHub</a> — 查看 design-md 相关 skill</li>
+  <li><a href="../../reference/stitch-glossary.html">Stitch 术语速查表</a></li>
+</ul>
+
+<h2>📌 别忘了</h2>
+<p>DEFIGN.md 最容易被忽略的价值是"跨工具"——不只 Stitch 用，Claude Code、Gemini CLI、Cursor 都支持。花时间把设计系统写进 DESIGN.md，后续所有工具自动受益。</p>
+<p>下一课讲 <strong>Stitch SDK</strong>——怎么用代码编程式地生成 UI。</p>
+
+<script src="../../assets/nav.js"></script>
+</body>
+</html>

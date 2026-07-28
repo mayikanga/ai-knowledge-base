@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>yt-dlp L4: 集成与自动化 — 让 Agent 操作 yt-dlp</title>
+  <link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">yt-dlp · Lesson 4 / 4</div>
+  <h1 class="lesson-title">集成与自动化</h1>
+  <p class="lesson-subtitle">让 Agent 操作 yt-dlp</p>
+</div>
+
+<blockquote>
+  前三课你学完了 yt-dlp 的用法和原理。这课把 yt-dlp <strong>变成 Agent 和脚本可以调用的工具</strong>——先做成 Claude Code Skill，
+  再用 Python 代码调用 yt-dlp，最后搭建自动流水线。每一步都有详细的代码拆解。
+</blockquote>
+
+<h2 id="skill">一、封装为 Claude Code Skill</h2>
+<p>Skill 的作用：以后你在 Claude Code 里输入 <code>/yt-dlp 视频链接</code>，它就会自动按你定好的规则下载。</p>
+
+<p><strong>创建文件</strong> <code>.claude/skills/yt-dlp/SKILL.md</code>：</p>
+<pre><code>---
+name: yt-dlp                    # 命令名：/yt-dlp
+description: "Download video and audio from YouTube and other sites"
+allowedTools: ["Bash"]          # 只允许运行终端命令
+args:
+  - name: url
+    required: true
+  - name: format
+    required: false
+  - name: output
+    required: false
+---
+
+# yt-dlp 下载助手
+
+## 步骤
+1. 先检查 `yt-dlp --version` 是否安装
+2. 如果没有安装，运行 `pip install yt-dlp`
+3. 运行 `yt-dlp -F "$url"` 列出可用格式
+4. 选最佳画质（或按用户指定的 format）
+5. 下载完成后告诉我文件路径
+
+## 规则
+- 默认下载 1080p mp4
+- 如果 403 错误，加 --cookies-from-browser chrome
+- 如果用户说"只要音频"，用 -x --audio-format mp3</code></pre>
+
+<p>创建好后在 Claude Code 中测试：</p>
+<pre><code>/yt-dlp url="https://www.youtube.com/watch?v=xxx"</code></pre>
+
+<div class="banner banner-success">
+  <strong>💡 这段 SKILL.md 做了什么？</strong>
+  <p>它告诉 Claude：当用户输入 /yt-dlp 时，按步骤执行。Claude 会自动运行 yt-dlp 命令，然后把结果返回给你。</p>
+  <p>frontmatter（--- 之间的内容）定义了命令名、参数、可用的工具。</p>
+</div>
+
+<h2 id="python">二、Python API 编程</h2>
+<p>
+  yt-dlp 本身就是 Python 写的，所以可以直接 <code>import yt_dlp</code> 在你的 Python 脚本中调用它。
+  这样做的好处是：你可以写一个脚本，让 Claude Code 帮你运行或修改这个脚本，不需要手打命令行。
+</p>
+
+<h3>2.1 最简单的下载脚本</h3>
+<p>先建一个文件 <code>download.py</code>：</p>
+<pre><code>import yt_dlp
+
+# 配置参数，用字典写
+ydl_opts = {
+    'format': 'bestvideo[height<=1080]+bestaudio/best',  # 下载 1080p + 最佳音频
+    'outtmpl': '%(title)s.%(ext)s',                      # 文件名：视频标题.mp4
+    'merge_output_format': 'mp4',                         # 合并为 mp4
+}
+
+# 创建 yt-dlp 对象，传入配置
+with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+    # 开始下载，参数是一个 URL 列表
+    ydl.download(['https://www.youtube.com/watch?v=xxx'])</code></pre>
+
+<p>运行：<code>python download.py</code></p>
+
+<div class="info-box">
+  <strong>🔍 逐行解释</strong>
+  <p><code>import yt_dlp</code> — 引入 yt-dlp 的 Python 库</p>
+  <p><code>ydl_opts = {...}</code> — 一个字典，存所有参数。和命令行的 <code>-f</code>、<code>-o</code> 参数一一对应</p>
+  <p><code>yt_dlp.YoutubeDL(ydl_opts)</code> — 创建一个下载器对象，传入配置</p>
+  <p><code>with ... as ydl:</code> — with 语句会自动关闭资源</p>
+  <p><code>ydl.download([...])</code> — 开始下载，参数是一个 URL 的列表</p>
+</div>
+
+<h3>2.2 只获取信息，不下载</h3>
+<p>有时候你只想知道"这个视频有什么画质"，不想下载。用 <code>extract_info</code>：</p>
+<pre><code>import yt_dlp
+
+# 配置：安静模式，不下载
+ydl_opts = {
+    'quiet': True,           # 不打印多余信息
+    'no_warnings': True,     # 不显示警告
+}
+
+with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+    # extract_info 只提取信息，download=False 表示不下载
+    info = ydl.extract_info('https://www.youtube.com/watch?v=xxx', download=False)
+
+    # info 是一个字典（你 L3 学的 info dict）
+    # 你可以访问它的任何字段
+    print(f"标题: {info['title']}")
+    print(f"时长: {info['duration']} 秒")
+    print(f"上传者: {info['uploader']}")
+    print(f"有多少种格式: {len(info['formats'])}")
+
+    # 遍历所有格式，打印分辨率信息
+    for f in info['formats']:
+        if f.get('height'):
+            print(f"  [{f['format_id']}] {f['height']}p - {f['ext']} - {f.get('tbr', '?')}kbps")</code></pre>
+
+<div class="info-box">
+  <strong>🔍 extract_info 做了什么？</strong>
+  <p>它调用了 L3 讲的 Extractor——去网站抓页面、解析元数据、返回一个完整的字典。</p>
+  <p>这个字典里包含：标题、时长、上传者、所有格式列表、字幕、缩略图……</p>
+  <p><code>download=False</code> 表示只查不下，省流量省时间。</p>
+</div>
+
+<h3>2.3 监听下载进度</h3>
+<p>用 <code>progress_hooks</code> 参数，可以在下载过程中"收到通知"：</p>
+<pre><code>import yt_dlp
+
+# 这个函数会在下载过程中被反复调用
+def 进度回调(d):
+    """
+    d 是一个字典，包含当前下载的状态。
+    每次有进展时，yt-dlp 自动调用这个函数。
+    """
+    if d['status'] == 'downloading':
+        # 正在下载中
+        百分比 = d.get('_percent_str', 'N/A').strip()
+        速度 = d.get('_speed_str', 'N/A').strip()
+        print(f"下载中: {百分比} @ {速度}")
+    elif d['status'] == 'finished':
+        # 下载完了，还没后处理
+        print(f"下载完成: {d['filename']}")
+
+ydl_opts = {
+    'format': 'bestaudio/best',
+    'outtmpl': '%(title)s.%(ext)s',
+    'progress_hooks': [进度回调],  # 注册回调函数
+    'postprocessors': [{          # 下载完后做什么
+        'key': 'FFmpegExtractAudio',  # 提取音频
+        'preferredcodec': 'mp3',      # 转成 mp3
+        'preferredquality': '192',    # 码率 192kbps
+    }],
+}
+
+with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+    ydl.download(['https://www.youtube.com/watch?v=xxx'])</code></pre>
+
+<div class="info-box">
+  <strong>🔍 回调函数是什么？</strong>
+  <p>回调函数就是"你写好一个函数，yt-dlp 在下载过程中自动调它"。</p>
+  <p><code>progress_hooks: [进度回调]</code> — 注册了这个函数后，yt-dlp 每次下载进度更新时都会调用它。</p>
+  <p>参数 <code>d</code> 是 yt-dlp 传给函数的字典，包含当前状态和数据。</p>
+</div>
+
+<h2 id="skill-hook">三、Skill + Hook 联动</h2>
+<p>加上 Hook 后，每次 Claude Code 执行 yt-dlp 命令前自动检查磁盘空间：</p>
+
+<p>在 <code>.claude/settings.json</code> 的 hooks 里加一段：</p>
+<pre><code>{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",    // 只在运行 Bash 工具时触发
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c '
+              # 从标准输入读取 Claude 要执行的命令
+              cmd=$(cat /dev/stdin | jq -r .tool_input.command 2>/dev/null)
+
+              # 如果命令中包含 yt-dlp
+              if echo \"$cmd\" | grep -q \"yt-dlp\"; then
+                # 检查磁盘剩余空间（单位 KB）
+                available=$(df --output=avail / 2>/dev/null | tail -1)
+                if [ \"$available\" -lt 1048576 ]; then
+                  echo \"磁盘空间不足 1GB，停止下载\" >&2
+                  exit 2   # exit 2 = 阻止操作
+                fi
+              fi
+            '",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}</code></pre>
+
+<div class="info-box">
+  <strong>🔍 这个 hook 怎么工作的？</strong>
+  <p>每次 Claude 要执行 <code>Bash</code> 命令时（不只是 yt-dlp，所有命令），这个 hook 先被调用。</p>
+  <p>hook 里的 bash 脚本检查命令中是否包含 "yt-dlp"，如果包含就查磁盘空间。</p>
+  <p>空间不足时 <code>exit 2</code>，Claude 看到退出码 2 就会停止执行。</p>
+</div>
+
+<h2 id="pipeline">四、写一个可复用的下载工具类</h2>
+<p>把常用的下载功能打包成一个 Python 类，以后在任何脚本中直接调用。这也方便 Agent 理解和使用：</p>
+
+<pre><code>import yt_dlp
+import json
+from pathlib import Path
+
+class 下载工具:
+    """封装 yt-dlp，提供简单好用的方法"""
+
+    def __init__(self, 保存目录="./downloads"):
+        # 初始化时指定保存目录
+        self.保存目录 = Path(保存目录)
+        # 如果目录不存在就创建
+        self.保存目录.mkdir(exist_ok=True)
+
+    def 查看格式(self, url):
+        """查看视频有哪些格式可选"""
+        with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
+            信息 = ydl.extract_info(url, download=False)
+            格式列表 = []
+            for f in 信息['formats']:
+                格式列表.append({
+                    '编号': f['format_id'],
+                    '格式': f.get('ext'),
+                    '分辨率': f.get('height'),
+                    '码率': f.get('tbr'),
+                    '大小': f.get('filesize'),
+                })
+            return {
+                '标题': 信息['title'],
+                '时长': 信息['duration'],
+                '格式列表': 格式列表,
+            }
+
+    def 下载最佳(self, url, 最高分辨率=1080):
+        """下载最高画质视频"""
+        配置 = {
+            'format': f'bestvideo[height<={最高分辨率}]+bestaudio/best',
+            'outtmpl': str(self.保存目录 / '%(title)s.%(ext)s'),
+            'merge_output_format': 'mp4',
+            'quiet': True,
+        }
+        with yt_dlp.YoutubeDL(配置) as ydl:
+            ydl.download([url])
+            信息 = ydl.extract_info(url, download=False)
+            return {
+                '标题': 信息['title'],
+                '路径': str(self.保存目录 / f"{信息['title']}.mp4"),
+            }
+
+    def 下载音频(self, url, 格式='mp3', 音质=192):
+        """只下载音频"""
+        配置 = {
+            'format': 'bestaudio/best',
+            'outtmpl': str(self.保存目录 / '%(title)s.%(ext)s'),
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 格式,
+                'preferredquality': str(音质),
+            }],
+            'quiet': True,
+        }
+        with yt_dlp.YoutubeDL(配置) as ydl:
+            ydl.download([url])
+            信息 = ydl.extract_info(url, download=False)
+            return {
+                '标题': 信息['title'],
+                '路径': str(self.保存目录 / f"{信息['title']}.{格式}"),
+            }
+
+
+# ── 下面是使用示例 ──
+
+# 1. 创建工具对象
+工具 = 下载工具()
+
+# 2. 查看视频格式
+格式信息 = 工具.查看格式("https://www.youtube.com/watch?v=xxx")
+print(json.dumps(格式信息, indent=2, ensure_ascii=False))
+
+# 3. 选择要执行的下载
+视频结果 = 工具.下载最佳("https://www.youtube.com/watch?v=xxx")
+print(f"已下载到: {视频结果['路径']}")
+
+# 或者只提音频
+音频结果 = 工具.下载音频("https://www.youtube.com/watch?v=xxx")
+print(f"音频已保存: {音频结果['路径']}")</code></pre>
+
+<div class="info-box">
+  <strong>🔍 这个类怎么用？</strong>
+  <p>把这段代码保存为 <code>yt_dlp_tool.py</code>，然后在终端运行或用 Claude Code 调用。</p>
+  <p>三个方法对应三个常见场景：查看格式、下载视频、下载音频。</p>
+  <p>每个方法都返回字典，方便你在代码中继续处理，也方便 Agent 读取。</p>
+</div>
+
+<h2 id="workflow">五、让 Claude Code Workflow 调度下载</h2>
+<p>用 Claude Code 的 Workflow（CC L4 学的）编排批量下载任务：</p>
+
+<pre><code>// 保存到 .claude/workflows/batch-download.js
+// 用法：在 Claude Code 中运行 /batch-download
+// 然后告诉它你要下载的 URL 列表
+
+export const meta = {
+  name: "batch-download",
+  description: "批量下载视频并提取信息",
+  phases: [
+    { title: "查询信息", detail: "获取每个视频的元数据" },
+    { title: "下载", detail: "按配置下载文件" },
+  ],
+}
+
+phase("查询信息")
+const 视频列表 = args.urls || []
+
+// 并行查询所有视频的信息
+const 所有信息 = await parallel(视频列表.map(url => () =>
+  agent(`用 Python 的 yt_dlp 库获取这个视频的信息（不下文件）
+    import yt_dlp
+    with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
+        info = ydl.extract_info('${url}', download=False)
+        print(info['title'], info['duration'])
+    `, {phase: "查询信息"})
+))
+
+phase("下载")
+// 逐个下载（串行，避免同时占带宽）
+for (let i = 0; i < 视频列表.length; i++) {
+  await agent(`下载视频：${所有信息[i]}
+
+    用 Python 运行以下代码：
+    from yt_dlp_tool import 下载工具
+    工具 = 下载工具()
+    结果 = 工具.下载最佳("${视频列表[i]}")
+    print(结果)
+
+    `, {phase: "下载", label: `下载 ${i+1}/${视频列表.length}`})
+}
+
+return { message: `共下载 ${视频列表.length} 个视频` }</code></pre>
+
+<div class="banner banner-warning">
+  <strong>⚠️ 这个 workflow 需要你先把 yt_dlp_tool.py（上一步的类）放在项目目录下。</strong>
+  <p>Workflow 的逻辑：</p>
+  <ul>
+    <li>先并行（parallel）查询所有视频的标题和时长</li>
+    <li>再逐个（串行）下载，避免同时下载占满带宽</li>
+    <li>每个步骤都在 Agent 的独立上下文中运行</li>
+  </ul>
+</div>
+
+<h2 id="practice">动手练习</h2>
+<div class="exercise">
+  <h3>🎯 按顺序完成</h3>
+  <ol class="steps">
+    <li><strong>创建 SKILL.md</strong><p>按第一节的模板创建 <code>.claude/skills/yt-dlp/SKILL.md</code>，然后在 Claude Code 中输入 <code>/yt-dlp url="https://www.youtube.com/watch?v=dQw4w9WgXcQ"</code>。</p></li>
+    <li><strong>写 Python 脚本查信息</strong><p>用 2.2 节的代码写一个 <code>check_video.py</code>，运行后看看控制台输出了什么。</p></li>
+    <li><strong>写下载工具类</strong><p>把"下载工具"类复制到你的项目中，用 Claude Code 运行它：<code>python yt_dlp_tool.py</code>。</p></li>
+  </ol>
+</div>
+
+<h2>课后推荐阅读</h2>
+<ul>
+  <li><a href="0003-ytdlp-internals.html">回顾 L3: yt-dlp 原理</a> — 理解 info dict 的结构</li>
+  <li><a href="../0002-custom-skills.html">CC L2: Custom Skills</a> — skill 的 frontmatter 详解</li>
+  <li><a href="../0004-workflows.html">CC L4: Workflow 编排</a> — parallel 和 pipeline API</li>
+  <li><a href="https://github.com/yt-dlp/yt-dlp/blob/master/README.md" target="_blank">yt-dlp README</a> — Python API 完整参考</li>
+</ul>
+
+<p>有任何问题随时问我！</p>
+<script src="../../assets/nav.js"></script>
+</body>
+</html>

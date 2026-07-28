@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lesson 4: Workflow 编排 — 多 Agent 协奏曲</title>
+  <link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">Lesson 4 / 6</div>
+  <h1 class="lesson-title">Workflow 编排</h1>
+  <p class="lesson-subtitle">多 Agent 协奏曲</p>
+</div>
+
+<blockquote>
+  Mission 关联：前三课你学会了<strong>自动化</strong>（hooks）、<strong>复用</strong>（skills）、<strong>分工</strong>（subagents）。
+  这一课将教你<strong>指挥</strong>——用 JavaScript 脚本编排多个 subagent 协同工作，像指挥家一样调配合唱团。
+</blockquote>
+
+<h2 id="wf-intro">什么是 Workflow？</h2>
+
+<p>
+  Workflow 是 Claude Code 的<strong>多 agent 编排脚本</strong>。它是一个 JavaScript 文件，通过 <code>agent()</code>、<code>parallel()</code>、<code>pipeline()</code> 等 API
+  来控制和协调多个 subagent 的执行顺序和协作方式。
+</p>
+
+<div class="info-box">
+  <strong>💡 类比一下</strong>
+  <ul>
+    <li><strong>Hook</strong> 是"条件反射"——事件触发自动执行</li>
+    <li><strong>Skill</strong> 是"工具书"——按步骤操作</li>
+    <li><strong>Subagent</strong> 是"员工"——独立完成分配的任务</li>
+    <li><strong>Workflow</strong> 是"项目经理"——把合适的人、在合适的时间、用合适的方式组合起来</li>
+  </ul>
+</div>
+
+<h2 id="wf-lifecycle">Workflow 的完整生命周期</h2>
+
+<ol>
+  <li><strong>构思</strong>——在 Claude Code 会话中用自然语言描述你想要什么</li>
+  <li><strong>生成</strong>——Claude 根据你的描述生成 workflow 脚本</li>
+  <li><strong>运行</strong>——通过 <code>/workflows</code> 运行，观察进度</li>
+  <li><strong>保存</strong>——运行成功后，保存到 <code>.claude/workflows/&lt;name&gt;.js</code></li>
+  <li><strong>复用</strong>——以后直接 <code>/workflow-name</code> 调用</li>
+</ol>
+
+<div class="banner banner-success">
+  <strong>📁 存放位置：</strong><code>.claude/workflows/&lt;name&gt;.js</code> —— 保存后自动变成 <code>/name</code> slash command。
+</div>
+
+<h2 id="wf-api">核心 API</h2>
+
+<p>Workflow 脚本中用到的 API：</p>
+
+<table>
+  <tr>
+    <th>函数</th>
+    <th>用途</th>
+    <th>类比</th>
+  </tr>
+  <tr>
+    <td><code>agent(prompt, opts?)</code></td>
+    <td>启动一个 subagent 执行任务</td>
+    <td>派一个员工干活</td>
+  </tr>
+  <tr>
+    <td><code>parallel(thunks)</code></td>
+    <td>并行启动多个任务，等全部完成</td>
+    <td>多个员工同时干</td>
+  </tr>
+  <tr>
+    <td><code>pipeline(items, stage1, stage2, ...)</code></td>
+    <td>流水线：每个 item 依次经过多个阶段</td>
+    <td>流水线作业</td>
+  </tr>
+  <tr>
+    <td><code>phase(title)</code></td>
+    <td>标记当前阶段（显示在进度树中）</td>
+    <td>贴进度标签</td>
+  </tr>
+  <tr>
+    <td><code>log(message)</code></td>
+    <td>输出进度消息</td>
+    <td>汇报进展</td>
+  </tr>
+</table>
+
+<h3 id="wf-agent">agent() 详解</h3>
+
+<pre><code>// 基本用法 —— 返回文本
+const result = await agent("Find all TODO comments in the codebase")
+
+// 带选项 —— 结构化输出
+const result = await agent("Find bugs", {
+  label: "bug-finder",        // 在进度树中显示的标签
+  phase: "Find",              // 归属阶段
+  schema: {                   // JSON Schema 约束输出结构
+    type: "object",
+    properties: {
+      bugs: { type: "array" }
+    }
+  },
+  model: "sonnet",            // 模型覆盖
+  effort: "high",             // 推理努力程度
+  isolation: "worktree",      // 工作树隔离
+  agentType: "code-reviewer"  // 使用特定 agent 类型
+})</code></pre>
+
+<h3 id="wf-pipeline">pipeline() 详解</h3>
+
+<p>流水线模式：多个 item 各自独立经过所有阶段。<strong>没有全局屏障</strong>——item A 可能已经到了 stage 3，而 item B 还在 stage 1。</p>
+
+<pre><code>const results = await pipeline(
+  items,                                       // 要处理的数组
+  item => stage1(item),                        // 第一阶段
+  prevResult => stage2(prevResult),            // 第二阶段（接收上一阶段的输出）
+  (prevResult, originalItem, index) => {       // 第三阶段和原始数据
+    return stage3(prevResult, originalItem)
+  }
+)</code></pre>
+
+<div class="banner banner-warning">
+  <strong>⚠️ 关键理解：pipeline 是"无屏障流水线"</strong><br>
+  pipeline 不是"跑完所有 stage 1 → 再跑所有 stage 2"——<br>
+  而是"item A 跑完 stage 1→2→3，同时 item B 已经在跑 stage 1 了"。<br>
+  总耗时 = 最慢的单个 item 耗时，而不是各阶段耗时之和。
+</div>
+
+<h3 id="wf-parallel">parallel() 详解</h3>
+
+<p>并行模式：<strong>有全局屏障</strong>——所有任务启动，等全部完成后才继续。</p>
+
+<pre><code>const [result1, result2, result3] = await parallel([
+  () => agent("Task 1"),
+  () => agent("Task 2"),
+  () => agent("Task 3"),
+])
+
+// 失败的 agent 返回 null，不会让 parallel 崩溃
+// 所以用 .filter(Boolean) 过滤
+const valid = results.filter(Boolean)</code></pre>
+
+<div class="info-box">
+  <strong>💡 何时用 barrier？</strong><br>
+  pipeline 是默认选择。barrier (parallel) 只在真正需要"等所有结果到齐"时才用：<br>
+  —— 去重/合并需要全集<br>
+  —— 提前退出（"0 个 bug 找到 → 跳过验证阶段"）<br>
+  —— 比较/排序需要完整列表
+</div>
+
+<h2 id="wf-structure">脚本结构</h2>
+
+<p>每个 workflow 必须以 <code>meta</code> 开头，然后才是脚本体：</p>
+
+<pre><code>export const meta = {
+  name: "audit-codebase",
+  description: "Audit the codebase for bugs, security issues, and style problems",
+  phases: [
+    { title: "Find", detail: "Search for issues across dimensions" },
+    { title: "Verify", detail: "Adversarially verify each finding" },
+    { title: "Report", detail: "Generate final report" },
+  ],
+}
+
+phase("Find")
+const findings = await parallel([
+  () => agent("Find bugs", {phase: "Find", schema: BUGS_SCHEMA}),
+  () => agent("Find security issues", {phase: "Find", schema: SEC_SCHEMA}),
+  () => agent("Find style problems", {phase: "Find", schema: STYLE_SCHEMA}),
+])
+
+phase("Verify")
+const verified = await pipeline(
+  findings.flat().filter(Boolean),
+  finding => agent(`Verify: ${finding.title}`, {phase: "Verify", schema: VERDICT_SCHEMA}),
+)
+
+phase("Report")
+const report = await agent("Write report", {phase: "Report"})
+
+return { confirmed: verified.filter(Boolean).filter(v => v.isReal) }</code></pre>
+
+<h2 id="wf-patterns">常见编排模式</h2>
+
+<h3>模式一：并行发掘（多维度扫描）</h3>
+<pre><code>const results = await parallel(DIMENSIONS.map(d => () =>
+  agent(d.prompt, {schema: FINDINGS_SCHEMA})
+))
+const deduped = dedupe(results.flat().filter(Boolean))</code></pre>
+
+<h3>模式二：流水线验证（边查边验）</h3>
+<pre><code>const results = await pipeline(
+  DIMENSIONS,
+  d => agent(d.prompt, {phase: "Review", schema: FINDINGS_SCHEMA}),
+  review => parallel(review.findings.map(f => () =>
+    agent(`Verify: ${f.title}`, {phase: "Verify", schema: VERDICT_SCHEMA})
+  ))
+)</code></pre>
+
+<h3>模式三：循环直到枯竭（Loop-until-dry）</h3>
+<pre><code>const seen = new Set()
+let dry = 0
+while (dry < 2) {
+  const found = await agent("Find more bugs", {schema: BUGS_SCHEMA})
+  const fresh = found.bugs.filter(b => !seen.has(key(b)))
+  if (!fresh.length) { dry++; continue }
+  dry = 0
+  fresh.forEach(b => seen.add(key(b)))
+  log(`Found ${fresh.length} new bugs (total: ${seen.size})`)
+}</code></pre>
+
+<h3>模式四：裁判评审（Judge Panel）</h3>
+<pre><code>const attempts = await parallel([
+  () => agent("Solve it with MVP-first approach"),
+  () => agent("Solve it with security-first approach"),
+  () => agent("Solve it with performance-first approach"),
+])
+const best = await agent(`Synthesize: pick best from: ${attempts.filter(Boolean).join("\n---\n")}`)</code></pre>
+
+<h2 id="wf-budget">Token 预算管理</h2>
+
+<p>Workflow 支持 token 预算控制。当用户指定了预算（如 "+500k"），workflow 可以根据预算动态调整规模：</p>
+
+<pre><code>// budget.total = 用户指定的预算（null 表示无限制）
+// budget.spent() = 已消耗的 token
+// budget.remaining() = 剩余预算
+
+while (budget.total && budget.remaining() > 50_000) {
+  const result = await agent("Find bugs", {schema: BUGS_SCHEMA})
+  bugs.push(...result.bugs)
+  log(`${bugs.length} found, ${Math.round(budget.remaining()/1000)}k remaining`)
+}</code></pre>
+
+<h2 id="wf-practice">动手练习：创建你的第一个 Workflow</h2>
+
+<div class="exercise">
+  <h3>🎯 练习：创建代码审查 Workflow</h3>
+
+  <p><strong>场景：</strong>你希望有一个"一键审查"流程——对当前代码变更做安全性、性能、代码质量三个维度的审查。</p>
+
+  <p><strong>步骤：</strong></p>
+
+  <ol class="steps">
+    <li>
+      <strong>在 Claude Code 中描述你的需求</strong>
+      <p>在 Claude Code 会话中输入：</p>
+      <pre><code>帮我创建一个 workflow，对当前代码库做三方面审查：
+1. 安全性检查
+2. 性能检查
+3. 代码质量检查
+三个审查并行进行，结果汇总成一份报告</code></pre>
+    </li>
+    <li>
+      <strong>运行并调整</strong>
+      <p>Claude 会生成脚本并用 <code>/workflows</code> 运行。观察进度树，看三个 agent 是否并行执行。</p>
+    </li>
+    <li>
+      <strong>保存为可复用命令</strong>
+      <p>运行成功后，保存到 <code>.claude/workflows/audit.js</code>。<br>
+      以后在任何项目中，输入 <code>/audit</code> 就能一键审查。</p>
+    </li>
+    <li>
+      <strong>进阶改进</strong>
+      <p>加上 <code>phase()</code> 分阶段标记，再加一个"验证"阶段：</p>
+      <pre><code>phase("Review")
+// 并行审查...
+phase("Verify")
+// 验证关键发现...
+phase("Report")
+// 生成报告...</code></pre>
+    </li>
+  </ol>
+</div>
+
+<h2 id="wf-meta">meta 字段详解</h2>
+
+<table>
+  <tr>
+    <th>字段</th>
+    <th>必填</th>
+    <th>说明</th>
+    <th>示例</th>
+  </tr>
+  <tr>
+    <td><code>name</code></td>
+    <td>✅</td>
+    <td>Workflow 名称，显示在进度树中</td>
+    <td><code>audit-codebase</code></td>
+  </tr>
+  <tr>
+    <td><code>description</code></td>
+    <td>✅</td>
+    <td>一句话描述，出现在权限提示中</td>
+    <td><code>Audit the codebase</code></td>
+  </tr>
+  <tr>
+    <td><code>phases</code></td>
+    <td>❌</td>
+    <td>阶段列表，每个有 title 和 detail</td>
+    <td><code>[{title: "Find", detail: "..."}]</code></td>
+  </tr>
+  <tr>
+    <td><code>whenToUse</code></td>
+    <td>❌</td>
+    <td>在 workflow 列表中显示的用途说明</td>
+    <td><code>When you need ...</code></td>
+  </tr>
+</table>
+
+<div class="banner banner-warning">
+  <strong>⚠️ 重要约束：</strong><code>meta</code> 必须是纯字面量对象——不能有变量、函数调用、模板字符串。<br>
+  ✅ <code>export const meta = { name: "audit", description: "..." }</code><br>
+  ❌ <code>export const meta = { name: getName() }</code>
+</div>
+
+<h2 id="wf-note">重要注意事项</h2>
+
+<ul>
+  <li><strong>最大 1000 个 agent</strong>——单个 workflow 最多启动 1000 个 subagent</li>
+  <li><strong>并行上限 ~10</strong>——实际同时运行的 agent 约等于 CPU 核心数 - 2</li>
+  <li><strong>失败的 agent 返回 null</strong>——用 <code>.filter(Boolean)</code> 过滤</li>
+  <li><strong>没有 Date.now() 和 Math.random()</strong>——保证可复现（resume 支持）</li>
+  <li><strong>可 Resume</strong> ——中断后可以恢复，已完成步骤返回缓存结果</li>
+  <li><strong>保存后变 Slash Command</strong>——<code>.claude/workflows/foo.js</code> → <code>/foo</code></li>
+</ul>
+
+<h2 id="wf-pipeline-parallel">pipeline vs parallel 选择指南</h2>
+
+<table>
+  <tr>
+    <th>场景</th>
+    <th>推荐</th>
+    <th>原因</th>
+  </tr>
+  <tr>
+    <td>多个独立任务，结果不互相依赖</td>
+    <td><strong>parallel</strong></td>
+    <td>同时跑，等全部完成</td>
+  </tr>
+  <tr>
+    <td>每个任务分多阶段，阶段间无依赖</td>
+    <td><strong>pipeline</strong></td>
+    <td>边查边验，不浪费等待时间</td>
+  </tr>
+  <tr>
+    <td>需要"全部到齐才能做下一步"</td>
+    <td><strong>parallel + 后续处理</strong></td>
+    <td>全局 barrier，等全集</td>
+  </tr>
+  <tr>
+    <td>需要去重/排序/比较</td>
+    <td><strong>parallel + barrier</strong></td>
+    <td>必须全集到齐才能操作</td>
+  </tr>
+  <tr>
+    <td>先找 bug，找到后立即验证</td>
+    <td><strong>pipeline</strong></td>
+    <td>每个 bug 找到就验，不用等所有找完</td>
+  </tr>
+</table>
+
+<div class="banner banner-success">
+  <strong>💡 核心原则：默认用 pipeline，需要全集时才用 barrier</strong>
+</div>
+
+<h2 id="wf-prereq">先决条件</h2>
+
+<p>要运行 workflow，确保你的 Claude Code 版本支持（v2.1.154+）：</p>
+
+<ul>
+  <li>可以在终端输入 <code>/workflows</code> 查看是否支持</li>
+  <li>可以在 <code>/config</code> 中设置 workflow 规模（small/medium/large/unrestricted）</li>
+  <li>本课程默认 medium 规模（最多 15 个 agent）</li>
+</ul>
+
+<h2>课后推荐阅读</h2>
+
+<ul>
+  <li><a href="https://code.claude.com/docs/en/features-overview" target="_blank">官方：Extend Claude Code — Workflows 部分</a></li>
+  <li><a href="../reference/glossary.html">术语速查表</a></li>
+  <li><a href="../lessons/0003-custom-subagents.html">回顾 Lesson 3：自定义 Subagent</a></li>
+</ul>
+
+<h2>📌 别忘了</h2>
+<p>Workflow 是 Claude Code 进阶的终极武器。学完这课后，你就能<strong>用脚本指挥多个 AI 员工协同工作</strong>了。</p>
+<p>有任何问题随时问！特别是 <code>pipeline</code> 和 <code>parallel</code> 的选择逻辑——这是最容易搞混的地方。</p>
+
+<script src="../assets/nav.js"></script>
+</body>
+</html>

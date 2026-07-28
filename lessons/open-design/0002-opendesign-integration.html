@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Open Design L2: 集成与指挥 — MCP、Skills、设计系统</title>
+  <link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">Open Design · Lesson 2 / 2</div>
+  <h1 class="lesson-title">集成与指挥</h1>
+  <p class="lesson-subtitle">MCP、Skills、设计系统、和 Claude Code 深度配合</p>
+</div>
+
+<blockquote>
+  L1 知道了 Open Design 是什么。这课深入<strong>怎么用它指挥 Claude Code 做设计</strong>——MCP 集成、
+  用内置 Skills 下命令、切换品牌设计系统、让 Agent 直接写文件到你的项目里。
+</blockquote>
+
+<h2 id="mcp">MCP 集成：在 Claude Code 中操作设计项目</h2>
+<p>安装 MCP 后，Claude Code 可以直接读写你的 Open Design 项目文件：</p>
+
+<pre><code># 安装 MCP（L1 已装过）
+od mcp install claude
+
+# 在 Claude Code 中可以用这些命令：
+od project list                  # 列出所有设计项目
+od project list --json           # JSON 格式输出
+od files list &lt;project-id&gt;       # 查看项目文件
+od files read &lt;project-id&gt; &lt;path&gt; # 读取具体文件
+od plugin list                   # 列出已安装插件
+od skills list                   # 列出可用 Skills
+od design-system list            # 列出设计系统</code></pre>
+
+<div class="info-box">
+  <strong>💡 MCP 的意义</strong>
+  <p>没有 MCP 时：你在 Claude Code 里聊天，设计在另一个工具里，两边不互通。</p>
+  <p>有 MCP 后：Claude Code 可以直接读设计项目文件、切换设计系统、生成产物写进你的项目目录。</p>
+  <p>Agent 看到的始终是<strong>实时的项目文件</strong>，不是过期的导出。</p>
+</div>
+
+<h2 id="skills">用 Skills 下命令</h2>
+<p>Open Design 内置 100+ Skills，每个都是你可以给 Agent 下的"设计命令"：</p>
+
+<pre><code># 在 Claude Code 中使用 Open Design 的 Skill
+# 假设 Skill 已安装到你的 .claude/skills/ 目录
+
+# 创建一个设计系统
+/create-design-system
+# → 分析你的代码库，提取颜色、字体、间距，生成 DESIGN.md
+
+# 生成落地页
+/frontend-design
+# → 根据需求生成完整的前端设计稿
+
+# 生成线框图
+/wireframe
+# → 快速出线框图确认布局
+
+# 生成交互原型
+/interactive-prototype
+# → 可点击的交互原型
+
+# 生成展示文稿
+/make-a-deck
+# → 生成 PPT 风格的展示页面（15 种模板 × 36 种主题）</code></pre>
+
+<h2 id="design-systems">切换品牌设计系统</h2>
+<p>Open Design 内置 151 个品牌的设计系统。切换一个，下次生成直接用该品牌的风格：</p>
+
+<table>
+  <tr><th>类别</th><th>品牌</th></tr>
+  <tr><td>AI & LLM</td><td>Claude、Cohere、Mistral、Replicate、Ollama、xAI</td></tr>
+  <tr><td>开发者工具</td><td>Vercel、Linear、Framer、Supabase、Sentry、Mintlify</td></tr>
+  <tr><td>生产力</td><td>Notion、Figma、Miro、Airtable、Superhuman、Raycast</td></tr>
+  <tr><td>金融</td><td>Stripe、Coinbase、Binance、Mastercard、Revolut、Wise</td></tr>
+  <tr><td>电商</td><td>Shopify、Airbnb、Nike、Starbucks</td></tr>
+  <tr><td>科技</td><td>Apple、IBM、NVIDIA、SpaceX、Tesla</td></tr>
+  <tr><td>媒体</td><td>Spotify、PlayStation、Wired、Meta</td></tr>
+</table>
+
+<p>切换命令：</p>
+<pre><code># 查看所有设计系统
+od design-system list
+
+# 指定用某个品牌
+# 在 Claude Code 中：切换设计系统为 vercel，然后生成落地页
+
+# 也可以用你自己的 DESIGN.md（L3 学的）
+# Open Design 读取项目中的 DESIGN.md 作为品牌合约</code></pre>
+
+<h2 id="plugin">插件系统</h2>
+<p>277 个官方插件 + 183 个参考示例，覆盖各种场景：</p>
+
+<pre><code># 搜索插件
+od plugin search "landing page"
+
+# 安装插件
+od plugin install od-figma-migration   # 迁移 Figma 设计稿
+od plugin install od-refresh-codebase  # 刷新现有代码库的品牌风格
+
+# 查看插件信息
+od plugin info od-default
+
+# 应用插件
+od plugin apply od-default --input brief="我们需要一个 SaaS 落地页"
+
+# 创建自己的插件
+od plugin scaffold --id my-plugin</code></pre>
+
+<h2 id="workflow">完整协作流程</h2>
+<pre><code>你："/create-design-system"
+Agent：分析代码库 → 提取 DESIGN.md → 保存到项目
+
+你："帮我用 Linear 的风格设计一个 Dashboard"
+Agent：读取 Linear 设计系统 → 生成设计稿 → 写进项目文件
+
+你："切换成 Stripe 的风格重新生成"
+Agent：切换设计系统 → 重新生成 → 覆盖文件
+
+你："生成一个展示文稿，发给客户看"
+Agent：选 deck 模板 → 绑定当前设计系统 → 导出 HTML/PDF
+
+你："这个按钮样式调一下"
+Agent：读项目文件 → 调 CSS → 更新</code></pre>
+
+<h2 id="practice">动手练习</h2>
+<div class="exercise">
+  <h3>🎯 在 Claude Code 中用 Open Design 做设计</h3>
+  <ol class="steps">
+    <li><strong>安装 MCP</strong><pre><code>od mcp install claude</code></pre></li>
+    <li><strong>列出设计系统</strong><p>在 Claude Code 中运行 <code>od design-system list</code> 看看有哪些品牌可用。</p></li>
+    <li><strong>用某品牌风格生成页面</strong><p>选一个你喜欢的品牌（如 Linear、Vercel），让 Claude Code 用它生成一个页面。</p></li>
+  </ol>
+</div>
+
+<h2>课后推荐阅读</h2>
+<ul>
+  <li><a href="https://github.com/nexu-io/open-design" target="_blank">GitHub 仓库</a> — 完整文档和示例</li>
+  <li><a href="../stitch/0005-stitch-mcp.html">回顾 Stitch MCP 集成</a> — 对比两种 MCP 方式</li>
+  <li><a href="0001-opendesign-basics.html">回顾 L1: Open Design 基础</a></li>
+</ul>
+
+<p>有任何问题随时问我！</p>
+<script src="../../assets/nav.js"></script>
+</body>
+</html>

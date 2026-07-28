@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Open Design L1: 基础 — 开源 Claude Design 替代品</title>
+  <link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">Open Design · Lesson 1 / 2</div>
+  <h1 class="lesson-title">Open Design 基础</h1>
+  <p class="lesson-subtitle">开源的 Claude Design 设计工作台</p>
+</div>
+
+<blockquote>
+  你学过了 Stitch（Google 的 AI 设计工具）。Open Design 是<strong>开源的 Claude Design 替代品</strong>——本地优先、模型无关、
+  直接对接 Claude Code 等你已有的编码 Agent。它不内置 AI，而是让你已有的 Agent 来做设计。
+</blockquote>
+
+<h2 id="intro">Open Design 是什么？</h2>
+<p>
+  Open Design（<code>nexu-io/open-design</code>）是一个<strong>本地优先的开源设计工作台</strong>，可以理解为"Claude Design 的开源替代"。
+  但它和 Stitch/Claude Design 最大的区别是：<strong>它没有自己的 AI</strong>——它让你已有的编码 Agent（Claude Code、Codex、Cursor 等）来做设计。
+</p>
+
+<div class="info-box">
+  <strong>💡 核心定位</strong>
+  <p>Stitch / Claude Design：云端 AI 做设计 → 你下载代码</p>
+  <p>Open Design：你的本地 Agent 做设计 → 直接写进你的项目文件</p>
+  <p>一个是"AI 工具"，一个是"Agent 工作台"。</p>
+</div>
+
+<h2 id="vs-stitch">和 Stitch 的对比</h2>
+<table>
+  <tr><th>维度</th><th>Stitch</th><th>Open Design</th></tr>
+  <tr><td>开源</td><td>❌ 闭源</td><td>✅ Apache-2.0</td></tr>
+  <tr><td>运行方式</td><td>云端 Web</td><td>本地桌面 App + CLI</td></tr>
+  <tr><td>AI 模型</td><td>Gemini（Google 限定）</td><td>任意模型（BYOK，用你自己的 Key）</td></tr>
+  <tr><td>和 Claude Code 的关系</td><td>通过 MCP 连接</td><td>原生集成，od mcp install claude</td></tr>
+  <tr><td>设计系统</td><td>你自己创建</td><td>151 个品牌设计系统内置（Stripe、Linear、Notion…）</td></tr>
+  <tr><td>Skills</td><td>stitch-skills（15 个）</td><td>100+ 功能 Skills 内置</td></tr>
+  <tr><td>输出</td><td>Figma / HTML / React</td><td>HTML / PDF / PPTX / MP4 / ZIP</td></tr>
+  <tr><td>隐私</td><td>Google 云端处理</td><td>本地运行，数据不出机器</td></tr>
+</table>
+
+<h2 id="install">安装</h2>
+<p><strong>推荐：桌面 App（零配置）</strong></p>
+<pre><code># 从 open-design.ai 下载桌面版
+# 安装后自动检测你装了的 CLI 工具
+# 自动加载 100+ Skills、151 个设计系统</code></pre>
+
+<p><strong>CLI 安装到 Claude Code：</strong></p>
+<pre><code># 一行命令安装
+curl -fsSL https://open-design.ai/install.sh | sh -s claude
+
+# 或者用 MCP 安装
+od mcp install claude</code></pre>
+
+<p><strong>项目要求：</strong>Node ~24、pnpm 10.33.x</p>
+
+<h2 id="features">核心能力</h2>
+<table>
+  <tr><th>能力</th><th>说明</th></tr>
+  <tr><td>Agent 原生</td><td>没有内置 AI，用你已有的 CLI Agent</td></tr>
+  <tr><td>模型无关</td><td>BYOK 代理，支持 OpenAI/Anthropic/Google/Ollama 等任意端点</td></tr>
+  <tr><td>151 个设计系统</td><td>Stripe、Linear、Notion、Apple、Vercel、Shopify 等品牌开箱即用</td></tr>
+  <tr><td>100+ Skills</td><td>每个 skill 是一个 SKILL.md，遵循 Agent Skills 标准</td></tr>
+  <tr><td>277 个插件</td><td>场景、图片模板、视频模板、设计系统等</td></tr>
+  <tr><td>MCP 服务器</td><td>stdio MCP，让 Agent 读你的设计项目文件</td></tr>
+  <tr><td>输出格式</td><td>HTML / PDF / PPTX / MP4 / ZIP / Markdown</td></tr>
+  <tr><td>本地优先</td><td>桌面 App + SQLite，数据不出机器</td></tr>
+</table>
+
+<h2 id="workflow">设计工作流</h2>
+<pre><code>1. 提需求（Brief）
+   PM 或你提交一个设计需求
+   ↓
+2. 选插件（Plugin）
+   Agent 推荐合适的插件（落地页、仪表盘、PPT 等）
+   ↓
+3. 定方向（Direction）
+   从 5 个候选方向中选一个，或传截图/URL 提取设计系统
+   ↓
+4. 选品牌设计系统
+   从 151 个中选，或用自己的 DESIGN.md
+   ↓
+5. 生成产物
+   Agent 写出真正的 HTML/CSS 文件到你的项目目录
+   ↓
+6. 交接给开发
+   产物直接丢进 Claude Code / Cursor 继续开发</code></pre>
+
+<h2 id="skills">内置 Skills（部分）</h2>
+<table>
+  <tr><th>Skill</th><th>作用</th></tr>
+  <tr><td>create-design-system</td><td>从代码库提取设计系统</td></tr>
+  <tr><td>frontend-design</td><td>生成前端设计稿</td></tr>
+  <tr><td>wireframe</td><td>线框图</td></tr>
+  <tr><td>interactive-prototype</td><td>交互原型</td></tr>
+  <tr><td>make-a-deck</td><td>生成 PPT 风格展示</td></tr>
+  <tr><td>critique</td><td>五维自我评审</td></tr>
+  <tr><td>tweaks</td><td>AI 调参面板</td></tr>
+</table>
+
+<h2 id="practice">动手练习</h2>
+<div class="exercise">
+  <h3>🎯 安装 Open Design</h3>
+  <ol class="steps">
+    <li><strong>安装桌面 App</strong><p>访问 <a href="https://open-design.ai" target="_blank">open-design.ai</a> 下载桌面版。</p></li>
+    <li><strong>连接到 Claude Code</strong><pre><code>od mcp install claude</code></pre></li>
+    <li><strong>浏览内置设计系统</strong><p>看看 151 个品牌设计系统中，有没有你常用的。</p></li>
+  </ol>
+</div>
+
+<h2>课后推荐阅读</h2>
+<ul>
+  <li><a href="https://github.com/nexu-io/open-design" target="_blank">GitHub 仓库</a> — 源码和文档</li>
+  <li><a href="https://open-design.ai" target="_blank">官网</a> — 下载桌面版</li>
+  <li><a href="../stitch/0001-stitch-basics.html">回顾 Stitch 基础</a> — 对比理解</li>
+</ul>
+
+<p>下一课讲<strong>集成与指挥</strong>——MCP、Skills、设计系统、和 Claude Code 的深度配合。</p>
+<script src="../../assets/nav.js"></script>
+</body>
+</html>

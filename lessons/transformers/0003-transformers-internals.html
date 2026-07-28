@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transformers L3: 原理 — Tokenizer、AutoClass、模型架构</title>
+  <link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">Transformers · Lesson 3 / 4</div>
+  <h1 class="lesson-title">Transformers 原理</h1>
+  <p class="lesson-subtitle">Tokenizer、AutoClass、模型架构</p>
+</div>
+
+<blockquote>
+  L1-L2 你都在用封装好的 pipeline。这课打开黑箱——<strong>pipeline 里面到底发生了什么</strong>。
+  理解 Tokenizer 怎么把文字变成数字、AutoClass 怎么自动匹配模型架构、模型的 forward pass 是什么样的。
+</blockquote>
+
+<h2 id="overview">词 → 数字 → 模型 → 结果</h2>
+<pre><code>"I love transformers"
+   ↓
+① Tokenizer（分词器）
+   把句子切成单词/子词 → ["I", "love", "trans", "##formers"]
+   每个词映射到数字 ID → [1045, 2293, 5817, 14450]
+   加上 attention_mask → [1, 1, 1, 1]
+   ↓
+② Model（模型）
+   输入数字 ID → Transformer 网络 → 输出张量
+   ↓
+③ Post-processing（后处理）
+   把模型输出的张量转成人类可读的结果
+   → [{'label': 'POSITIVE', 'score': 0.999}]</code></pre>
+
+<h2 id="tokenizer">Tokenizer：文字 → 数字</h2>
+<p>Tokenizer 是模型的第一道关卡——把人类语言转成模型能理解的数字 ID：</p>
+
+<pre><code>from transformers import AutoTokenizer
+
+# 加载分词器（和模型配套的分词器）
+分词器 = AutoTokenizer.from_pretrained("bert-base-uncased")
+
+# 编码：文字 → 数字
+编码 = 分词器("Hello, how are you?", padding=True, truncation=True, return_tensors="pt")
+print(编码)
+# {'input_ids': tensor([[101, 7592, 1010, 2129, 2024, 2017, 1029, 102]]),
+#  'attention_mask': tensor([[1, 1, 1, 1, 1, 1, 1, 1]])}
+
+# 解码：数字 → 文字
+print(分词器.decode(编码['input_ids'][0]))
+# "[CLS] hello, how are you? [SEP]"</code></pre>
+
+<div class="info-box">
+  <strong>🔍 关键概念</strong>
+  <p><code>input_ids</code> — 每个词/子词对应的数字 ID（模型只能理解数字）</p>
+  <p><code>attention_mask</code> — 1 表示是有效内容，0 表示填充（padding）</p>
+  <p><code>[CLS]</code> 和 <code>[SEP]</code> — BERT 特殊标记，分别表示句子开头和分隔</p>
+  <p><code>return_tensors="pt"</code> — 返回 PyTorch 张量（pt = PyTorch）</p>
+</div>
+
+<h2 id="subword">子词分词（Subword Tokenization）</h2>
+<p>现代模型不使用"按空格切词"（那样词表太大了），而是用子词算法：</p>
+
+<pre><code>"unbelievable"
+  → ["un", "##believe", "##able"]
+
+# BPE（Byte-Pair Encoding）——GPT 使用
+# WordPiece —— BERT 使用
+# Unigram —— XLNet 使用
+# SentencePiece —— Llama、T5 使用</code></pre>
+
+<p>好处：<code>"transformers"</code> 和 <code>"transformer"</code> 共享 <code>"transform"</code> 子词，模型能学到词根意思。</p>
+
+<h2 id="autoclass">AutoClass：自动匹配模型架构</h2>
+<p>不同的模型（BERT、GPT、T5）结构完全不同，但 transformers 用 AutoClass 统一了入口：</p>
+
+<pre><code>from transformers import AutoTokenizer, AutoModelForSequenceClassification
+
+# 你只需要告诉它模型名字
+模型名 = "bert-base-uncased"
+
+# 它会自动：
+# 1. 从 Hugging Face Hub 下载配置
+# 2. 根据配置自动选择正确的模型类（BertForSequenceClassification）
+# 3. 加载预训练权重
+模型 = AutoModelForSequenceClassification.from_pretrained(模型名)
+分词器 = AutoTokenizer.from_pretrained(模型名)</code></pre>
+
+<table>
+  <tr><th>AutoClass</th><th>匹配的模型架构</th><th>用途</th></tr>
+  <tr><td><code>AutoModel</code></td><td>所有基础模型</td><td>获取特征向量</td></tr>
+  <tr><td><code>AutoModelForSequenceClassification</code></td><td>BertForSequenceClassification 等</td><td>文本分类</td></tr>
+  <tr><td><code>AutoModelForCausalLM</code></td><td>GPT2LMHeadModel、LlamaForCausalLM 等</td><td>文本生成</td></tr>
+  <tr><td><code>AutoModelForSeq2SeqLM</code></td><td>T5ForConditionalGeneration 等</td><td>翻译/摘要</td></tr>
+  <tr><td><code>AutoModelForQuestionAnswering</code></td><td>BertForQuestionAnswering 等</td><td>问答</td></tr>
+</table>
+
+<h2 id="forward">Pipeline 拆解：手动做一遍</h2>
+<p>以下代码演示了 pipeline("sentiment-analysis") 内部做了什么：</p>
+
+<pre><code>from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import torch
+
+# 1. 加载模型和分词器
+模型名 = "distilbert-base-uncased-finetuned-sst-2-english"
+分词器 = AutoTokenizer.from_pretrained(模型名)
+模型 = AutoModelForSequenceClassification.from_pretrained(模型名)
+
+# 2. 分词
+输入 = "This movie is fantastic!"
+编码 = 分词器(输入, return_tensors="pt")
+# 编码 = {'input_ids': tensor([[...]]), 'attention_mask': tensor([[...]])}
+
+# 3. 模型推理（forward pass）
+with torch.no_grad():  # 不计算梯度（推理模式）
+    输出 = 模型(**编码)  # 把 input_ids 和 attention_mask 传给模型
+    # 输出.logits = tensor([[-1.56,  2.84]])  # 原始分数
+
+# 4. 后处理
+概率 = torch.softmax(输出.logits, dim=1)  # 转成概率
+print(概率)  # tensor([[0.012, 0.988]])  → 1.2% 负面, 98.8% 正面
+
+标签 = ["NEGATIVE", "POSITIVE"]
+预测标签 = 标签[概率.argmax().item()]
+置信度 = 概率.max().item()
+print(f"{预测标签}: {置信度:.4f}")
+# POSITIVE: 0.988</code></pre>
+
+<div class="info-box">
+  <strong>🔍 这段代码做了什么？</strong>
+  <p><code>分词器(输入, return_tensors="pt")</code> — 把文字转成数字 ID 和 attention mask</p>
+  <p><code>模型(**编码)</code> — 把编码传给模型，执行 forward pass，返回 logits</p>
+  <p><code>torch.softmax(输出.logits)</code> — 把原始分数转成概率（和为 1）</p>
+  <p><code>概率.argmax()</code> — 取概率最高的那个标签</p>
+</div>
+
+<h2 id="model-types">三大模型架构</h2>
+<table>
+  <tr><th>架构</th><th>代表模型</th><th>特点</th><th>典型任务</th></tr>
+  <tr><td>Encoder-only</td><td>BERT、RoBERTa</td><td>双向注意力，理解整个句子</td><td>分类、NER、问答</td></tr>
+  <tr><td>Decoder-only</td><td>GPT、Llama、Mistral</td><td>单向注意力，逐个词生成</td><td>文本生成、对话</td></tr>
+  <tr><td>Encoder-Decoder</td><td>T5、BART</td><td>先编码理解，再解码生成</td><td>翻译、摘要</td></tr>
+</table>
+
+<h2>课后推荐阅读</h2>
+<ul>
+  <li><a href="https://huggingface.co/docs/transformers/tokenizer_summary" target="_blank">Tokenizer 总结</a> — 各种分词算法详解</li>
+  <li><a href="https://huggingface.co/docs/transformers/autoclass_tutorial" target="_blank">AutoClass 教程</a> — 自动加载模型详解</li>
+  <li><a href="https://huggingface.co/learn/nlp-course/chapter2/1" target="_blank">Hugging Face NLP Course</a> — 免费课程详解原理</li>
+  <li><a href="0001-transformers-basics.html">回顾 L1: Transformers 基础</a></li>
+</ul>
+
+<p>下一课讲<strong>集成与自动化</strong>——保存/加载模型、自定义 pipeline、与 Agent 结合。</p>
+<script src="../../assets/nav.js"></script>
+</body>
+</html>

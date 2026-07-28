@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Matt Pocock L1: 安装与配置 — 工程级 AI 技能包</title>
+  <link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">Matt Pocock · Lesson 1 / 3</div>
+  <h1 class="lesson-title">安装与配置</h1>
+  <p class="lesson-subtitle">工程级 AI 技能包</p>
+</div>
+
+<blockquote>
+  你已经在 Claude Code L2 学过了 skill 是什么。Matt Pocock 的 skills 是这套机制的<strong>最佳实践</strong>——193k Stars，
+  由 TypeScript 专家 Matt Pocock 维护，每个技能都解决一个真实工程痛点。
+  这课把它装进你的 Claude Code。
+</blockquote>
+
+<h2 id="intro">是什么？解决什么问题？</h2>
+<p>
+  Matt Pocock Skills 是一套<strong>面向真实工程开发的 Claude Code 技能集合</strong>。
+  它不是教你"vibe coding"，而是把软件工程的最佳实践（TDD、代码审查、领域建模）打包成可复用的 AI 工作流。
+</p>
+
+<table>
+  <tr><th>痛点</th><th>Agent 默认行为</th><th>Matt Pocock Skills 的做法</th></tr>
+  <tr><td>需求不对齐</td><td>猜你要什么</td><td>先面试你（/grill-with-docs）</td></tr>
+  <tr><td>代码质量差</td><td>一口气写一大段</td><td>红-绿-重构循环（/tdd）</td></tr>
+  <tr><td>架构腐烂</td><td>只顾叠加功能</td><td>定期架构审视（/improve-codebase-architecture）</td></tr>
+  <tr><td>上下文丢失</td><td>下个会话从头来</td><td>交接文档（/handoff）</td></tr>
+</table>
+
+<h2 id="install">安装（两种方式）</h2>
+
+<h3>方式一：Claude Code 插件（推荐）</h3>
+<p>一键安装，只读不可编辑，自动更新：</p>
+<pre><code>claude plugins install mattpocock-skills</code></pre>
+<p>或在 Claude Code 会话内：</p>
+<pre><code>/plugin install mattpocock-skills</code></pre>
+
+<h3>方式二：可编辑版</h3>
+<p>文件存到本地项目，你可以自己改：</p>
+<pre><code>npx skills@latest add mattpocock/skills</code></pre>
+<p>安装时会让你选要装哪些技能、适配哪个编码工具。</p>
+
+<div class="banner banner-warning">
+  <strong>💡 选哪个？</strong>
+  <p><strong>插件版</strong>：即装即用，自动更新，适合先体验</p>
+  <p><strong>可编辑版</strong>：文件在本地，你可以修改定制，适合想深度适配自己工作流的</p>
+</div>
+
+<h2 id="setup">首次配置</h2>
+<p>装完后，在项目目录中运行：</p>
+<pre><code>/setup-matt-pocock-skills</code></pre>
+<p>它会询问：</p>
+<ul>
+  <li><strong>Issue Tracker</strong> — GitHub / Linear / 本地文件</li>
+  <li><strong>Triage 标签</strong> — 你用哪些标签（bug / feature / tech-debt 等）</li>
+  <li><strong>文档路径</strong> — 文档存在哪里</li>
+</ul>
+<p>只需配置一次，后续所有技能都知道你的项目管理习惯。</p>
+
+<h2 id="philosophy">核心理念</h2>
+<div class="info-box">
+  <strong>💡 和 GSD / BMAD 等框架的区别</strong>
+  <p>其他框架"接管你的流程"——你只能按它们的方式做事。</p>
+  <p>Matt Pocock 的方式相反：技能是<strong>可组合、可修改、可控的</strong>。</p>
+  <p>引用原话：<em>"Hack around with them. Make them your own. Enjoy."</em></p>
+</div>
+
+<p>几个关键设计原则：</p>
+<ul>
+  <li><strong>用户调用 vs 模型调用</strong> — 你决定什么时候触发流程，agent 可以在流程内自动调用子技能</li>
+  <li><strong>小型、可组合</strong> — 每个技能只做一件事，组合使用</li>
+  <li><strong>模型无关</strong> — Claude Code、Codex、Cursor 都能用</li>
+  <li><strong>根植于经典工程实践</strong> — 《程序员的修炼之道》、DDD、XP、《软件设计哲学》</li>
+</ul>
+
+<h2 id="skills-overview">技能总览</h2>
+
+<table>
+  <tr><th>类型</th><th>技能</th><th>一句话</th></tr>
+  <tr><td rowspan="6">用户调用</td><td><code>/grill-with-docs</code></td><td>面试式需求梳理，建立领域模型</td></tr>
+  <tr><td><code>/grill-me</code></td><td>同上，但更轻量（非代码场景）</td></tr>
+  <tr><td><code>/to-spec</code></td><td>把当前对话转化为规格说明</td></tr>
+  <tr><td><code>/to-tickets</code></td><td>把计划拆成带依赖关系的任务</td></tr>
+  <tr><td><code>/implement</code></td><td>按规格/Ticket 实现，自动调 TDD + Review</td></tr>
+  <tr><td><code>/improve-codebase-architecture</code></td><td>生成架构改进报告</td></tr>
+  <tr><td rowspan="6">模型调用</td><td><code>/tdd</code></td><td>红-绿-重构 TDD 循环</td></tr>
+  <tr><td><code>/diagnosing-bugs</code></td><td>系统性 Bug 诊断流程</td></tr>
+  <tr><td><code>/code-review</code></td><td>双轴审查（标准 + 规格）</td></tr>
+  <tr><td><code>/domain-modeling</code></td><td>构建和精炼领域模型</td></tr>
+  <tr><td><code>/resolving-merge-conflicts</code></td><td>按意图解决合并冲突</td></tr>
+  <tr><td><code>/prototype</code></td><td>快速可抛弃原型</td></tr>
+  <tr><td rowspan="2">生产力</td><td><code>/handoff</code></td><td>压缩会话为交接文档</td></tr>
+  <tr><td><code>/wayfinder</code></td><td>规划跨会话的大块工作</td></tr>
+</table>
+
+<h2 id="practice">动手练习</h2>
+<div class="exercise">
+  <h3>🎯 安装并配置</h3>
+  <ol class="steps">
+    <li><strong>安装插件</strong><pre><code>/plugin install mattpocock-skills</code></pre></li>
+    <li><strong>运行配置</strong><pre><code>/setup-matt-pocock-skills</code></pre></li>
+    <li><strong>查看已安装的技能</strong><p>输入 <code>/ask-matt</code> 看看是否弹出技能路由。</p></li>
+  </ol>
+</div>
+
+<h2>关键要点</h2>
+<div class="banner banner-success">
+  <ul>
+    <li>Matt Pocock Skills = 软件工程最佳实践 × AI 技能格式</li>
+    <li>插件版一键安装自动更新，可编辑版存本地可修改</li>
+    <li>/setup-matt-pocock-skills 只需配置一次</li>
+    <li>用户调用（你主动触发）和模型调用（agent 自动用）分开设计</li>
+  </ul>
+</div>
+
+<h2>课后推荐阅读</h2>
+<ul>
+  <li><a href="https://github.com/mattpocock/skills" target="_blank">GitHub 仓库</a> — 193k Stars 的完整技能集</li>
+  <li><a href="https://aihero.dev/s/skills-newsletter" target="_blank">Matt Pocock Newsletter</a> — 技能更新通知</li>
+</ul>
+
+<p>下一课讲<strong>核心技能实操</strong>——grill/tdd/review 三板斧。</p>
+<script src="../../assets/nav.js"></script>
+</body>
+</html>

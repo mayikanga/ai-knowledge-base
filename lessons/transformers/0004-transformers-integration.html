@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transformers L4: 指挥大模型的命令 — 提示词、参数控制、输出解析</title>
+  <link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">Transformers · Lesson 4 / 4</div>
+  <h1 class="lesson-title">指挥大模型的命令</h1>
+  <p class="lesson-subtitle">给模型什么提示词，得到什么结果</p>
+</div>
+
+<blockquote>
+  前 3 课你学会了用 transformers 加载模型、跑各种任务、理解内部原理。这课聚焦一个核心问题：<strong>怎么给模型下指令，才能拿到想要的结果</strong>。
+  不同的提示词、不同的参数控制、不同的输出解析方式——这就是"指挥大模型"的本质。
+</blockquote>
+
+<h2 id="prompt-basics">一、提示词就是命令</h2>
+<p>在 transformers 里，"给模型的命令"就是一段文本——提示词（prompt）。模型读完提示词后，根据任务类型返回不同的结果：</p>
+
+<table>
+  <tr><th>任务</th><th>你给模型的命令（输入）</th><th>模型给你的结果（输出）</th></tr>
+  <tr><td>情感分析</td><td><code>"This movie is fantastic!"</code></td><td><code>[{'label': 'POSITIVE', 'score': 0.999}]</code></td></tr>
+  <tr><td>文本生成</td><td><code>"Once upon a time"</code></td><td><code>"Once upon a time, there was a brave knight..."</code></td></tr>
+  <tr><td>翻译</td><td><code>"Hello, how are you?"</code></td><td><code>"你好，你怎么样？"</code></td></tr>
+  <tr><td>问答</td><td>问题 + 上下文</td><td>从上下文中提取的答案片段</td></tr>
+  <tr><td>摘要</td><td>长篇文章</td><td>短句概括</td></tr>
+  <tr><td>零样本分类</td><td>文本 + 候选标签列表</td><td>每个标签的得分</td></tr>
+</table>
+
+<div class="info-box">
+  <strong>💡 核心思路</strong>
+  <p>每一类 pipeline 都对应一种"命令格式"。你给模型不同的输入结构，它就按不同的方式理解任务。</p>
+  <p>管好"输入"和"输出"，就是管好了模型。</p>
+</div>
+
+<h2 id="generation-control">二、控制文本生成——最灵活的"命令"</h2>
+<p>文本生成 pipeline 的参数最多，也是最需要精细指挥的。来看每个参数怎么影响模型的行为：</p>
+
+<h3>基础：给个开头，让它续写</h3>
+<pre><code>from transformers import pipeline
+
+生成器 = pipeline("text-generation", model="gpt2")
+
+# 最简单的命令：给一句话的开头
+结果 = 生成器("人工智能的未来是")
+print(结果[0]['generated_text'])
+# "人工智能的未来是不可预测的，但我们可以确定的是..."</code></pre>
+
+<h3>多返回几个候选</h3>
+<pre><code>结果 = 生成器(
+    "用 Python 写一个二分查找函数",
+    max_length=100,              # 生成的文本总长度（含提示词）
+    num_return_sequences=3,      # 返回 3 个不同版本
+    do_sample=True,              # 采样（否则每次都一样）
+)
+for i, 候选 in enumerate(结果):
+    print(f"\n--- 版本 {i+1} ---")
+    print(候选['generated_text'])</code></pre>
+
+<h3>控制"创造力"</h3>
+<pre><code># temperature：控制输出的随机性
+# 低 → 保守、可预测   高 → 有创意、可能跑偏
+
+保守 = 生成器("这个故事是关于", max_length=30, temperature=0.2, do_sample=True)
+创意 = 生成器("这个故事是关于", max_length=30, temperature=0.9, do_sample=True)
+
+print(f"保守 (0.2) : {保守[0]['generated_text']}")  # 最可能的结果
+print(f"创意 (0.9) : {创意[0]['generated_text']}")  # 意想不到的续写</code></pre>
+
+<h3>Top-k 和 Top-p 采样</h3>
+<pre><code># top_k：只从概率最高的 k 个词中选
+# top_p（nucleus sampling）：只从累积概率超过 p 的词中选
+
+结果 = 生成器(
+    "这个故事是关于",
+    max_length=50,
+    do_sample=True,
+    top_k=50,         # 只从 top 50 个词中选
+    top_p=0.95,       # 或者从累积概率 95% 的词中选
+    temperature=0.7,
+)
+print(结果[0]['generated_text'])</code></pre>
+
+<table>
+  <tr><th>参数</th><th>作用</th><th>低值 → 高值</th></tr>
+  <tr><td><code>temperature</code></td><td>控制随机性</td><td>保守 → 有创意</td></tr>
+  <tr><td><code>top_k</code></td><td>只从前 K 个词中选</td><td>严格 → 宽松</td></tr>
+  <tr><td><code>top_p</code></td><td>从累积概率 P 的词中选</td><td>聚焦 → 多样</td></tr>
+  <tr><td><code>max_length</code></td><td>生成的最大 token 数</td><td>短 → 长</td></tr>
+  <tr><td><code>num_return_sequences</code></td><td>返回几个候选</td><td>1 → 多个</td></tr>
+  <tr><td><code>repetition_penalty</code></td><td>避免重复（>1.0）</td><td>1.0 = 不限制</td></tr>
+</table>
+
+<h2 id="prompt-patterns">三、常见提示词模式</h2>
+<p>不同的任务需要不同的"命令结构"：</p>
+
+<h3>指令式（Instruction）</h3>
+<pre><code># 直接告诉模型要做什么
+提示词 = """
+请将以下英文翻译成中文：
+English: "The quick brown fox jumps over the lazy dog"
+中文：
+"""
+
+结果 = 生成器(提示词, max_length=100)
+print(结果[0]['generated_text'])</code></pre>
+
+<h3>少样本式（Few-shot）</h3>
+<pre><code># 给几个例子，让模型学模式
+提示词 = """
+将句子分类为"正面"或"负面"：
+
+句子: "这个产品太棒了！"
+分类: 正面
+
+句子: "质量很差，不值这个价"
+分类: 负面
+
+句子: "用了两天就坏了"
+分类:"""
+
+结果 = 生成器(提示词, max_length=50, temperature=0.1)
+print(结果[0]['generated_text'])</code></pre>
+
+<h3>结构化输出</h3>
+<pre><code># 让模型按指定格式输出，方便程序解析
+提示词 = """
+从以下文章中提取信息，按 JSON 格式输出：
+
+文章：特斯拉在 2023 年交付了 181 万辆汽车，总收入达 967 亿美元，
+其中汽车业务收入 824 亿美元。公司目前市值约 6000 亿美元。
+
+输出格式：
+{"公司名": "", "交付量": "", "总收入": "", "市值": ""}
+"""
+
+结果 = 生成器(提示词, max_length=200, temperature=0.1)
+print(结果[0]['generated_text'])</code></pre>
+
+<h2 id="pipeline-special">四、非生成式 pipeline 的"命令"方式</h2>
+<p>不只是文本生成需要下命令，其他 pipeline 也有各自的"指挥方式"：</p>
+
+<h3>填空（Fill-Mask）</h3>
+<pre><code>from transformers import pipeline
+
+填空 = pipeline("fill-mask", model="bert-base-uncased")
+
+# 用 [MASK] 占位符告诉模型要填什么
+结果 = 填空("I want to learn [MASK] programming language")
+for 候选 in 结果:
+    print(f"  {候选['token_str']}: {候选['score']:.3f}")
+#  Python: 0.421
+#  Java: 0.153
+#  C++: 0.092
+#  ...</code></pre>
+
+<h3>零样本分类（告诉模型按什么规则分类）</h3>
+<pre><code>零样本 = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+
+# "命令"由两部分组成：文本 + 候选标签
+结果 = 零样本(
+    "华为发布了新款折叠屏手机，售价 19999 元",
+    candidate_labels=["科技", "体育", "政治", "财经"]
+)
+print(f"分类: {结果['labels'][0]} ({结果['scores'][0]:.2f})")
+# 分类: 科技 (0.98)</code></pre>
+
+<h3>问答（告诉模型在哪找答案）</h3>
+<pre><code>问答 = pipeline("question-answering", model="distilbert-base-cased-distilled-squad")
+
+# "命令" = 问题 + 上下文（告诉模型答案的范围）
+结果 = 问答(
+    question="Python 的作者是谁？",
+    context="Python 是一种广泛使用的编程语言，由 Guido van Rossum 于 1991 年创建。"
+)
+print(f"答案: {结果['answer']} (置信度: {结果['score']:.2f})")</code></pre>
+
+<h2 id="output-parse">五、解析模型输出</h2>
+<p>理解模型返回的结构，才能在代码中正确使用：</p>
+
+<table>
+  <tr><th>pipeline 类型</th><th>返回结构</th><th>怎么取结果</th></tr>
+  <tr><td>sentiment-analysis</td><td><code>[{'label': str, 'score': float}]</code></td><td><code>结果[0]['label']</code></td></tr>
+  <tr><td>text-generation</td><td><code>[{'generated_text': str}]</code></td><td><code>结果[0]['generated_text']</code></td></tr>
+  <tr><td>summarization</td><td><code>[{'summary_text': str}]</code></td><td><code>结果[0]['summary_text']</code></td></tr>
+  <tr><td>translation</td><td><code>[{'translation_text': str}]</code></td><td><code>结果[0]['translation_text']</code></td></tr>
+  <tr><td>fill-mask</td><td><code>[{'token_str': str, 'score': float}]</code></td><td><code>结果[0]['token_str']</code></td></tr>
+  <tr><td>question-answering</td><td><code>{'answer': str, 'score': float}</code></td><td><code>结果['answer']</code></td></tr>
+  <tr><td>zero-shot-classification</td><td><code>{'labels': [], 'scores': []}</code></td><td><code>结果['labels'][0]</code></td></tr>
+  <tr><td>ner</td><td><code>[{'entity_group': str, 'word': str}]</code></td><td><code>结果[0]['word']</code></td></tr>
+</table>
+
+<h2 id="practice">动手练习</h2>
+<div class="exercise">
+  <h3>🎯 指挥模型做三件事</h3>
+  <ol class="steps">
+    <li><strong>控制创造力</strong><p>用 text-generation 分别设置 temperature=0.2 和 0.9，对比输出差异。理解参数对模型行为的影响。</p></li>
+    <li><strong>少样本学习</strong><p>手写 3 个例子让模型做情感分类（正面/负面），不给训练，只给例子。</p></li>
+    <li><strong>结构化输出</strong><p>让模型从一段新闻中提取指定信息，按 JSON 格式输出。</p></li>
+  </ol>
+</div>
+
+<h2>课后推荐阅读</h2>
+<ul>
+  <li><a href="https://huggingface.co/docs/transformers/main_classes/text_generation" target="_blank">Text Generation 参数文档</a> — 所有生成控制参数详解</li>
+  <li><a href="https://huggingface.co/docs/transformers/pipeline_tutorial" target="_blank">Pipeline 教程</a> — 每种 pipeline 的输入输出格式</li>
+  <li><a href="0003-transformers-internals.html">回顾 L3: 原理</a> — 理解 logits 和 softmax</li>
+</ul>
+
+<p>有问题随时问我！</p>
+<script src="../../assets/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transformers L1: 基础 — Hugging Face 核心模型库</title>
+  <link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">Transformers · Lesson 1 / 4</div>
+  <h1 class="lesson-title">Transformers 基础</h1>
+  <p class="lesson-subtitle">Hugging Face 核心模型库</p>
+</div>
+
+<blockquote>
+  Transformers 是 Hugging Face 维护的核心 Python 库，提供数千个预训练模型（BERT、GPT、Llama、T5 等）的统一接口。
+  一行代码就能加载模型做文本分类、生成、翻译、摘要——是 AI 开发的基础设施。
+</blockquote>
+
+<h2 id="intro">什么是 Transformers？</h2>
+<p>
+  <code>transformers</code> 是 Hugging Face 最知名的 Python 库，支持 <strong>NLP、计算机视觉、音频</strong> 三大领域的预训练模型。
+  它把不同模型架构（BERT、GPT、Llama、ViT、Whisper……）统一成一套 API，你不需要懂每个模型的内部实现就能使用它。
+</p>
+
+<div class="info-box">
+  <strong>💡 和之前学的工具的区别</strong>
+  <p>yt-dlp、Strix 是<strong>应用工具</strong>——安装就能用。Transformers 是<strong>开发库</strong>——你要写 Python 代码调用它。</p>
+  <p>你需要 Python 基础，不需要深度学习知识也能开始。</p>
+</div>
+
+<h2 id="install">安装</h2>
+<pre><code># 核心库 + PyTorch（推荐）
+pip install transformers torch
+
+# 只装核心库（用 CPU 也能跑）
+pip install transformers
+
+# 验证安装
+python -c "from transformers import pipeline; print('OK')"</code></pre>
+
+<div class="banner banner-warning">
+  <strong>⚠️ 如果你的机器没有 GPU（如 RTX 3050 4GB），transformers 会自动用 CPU 运行。</strong>
+  <p>CPU 也能跑，大模型会慢一些。4GB 显存可以跑中小模型（如 BERT、distilGPT2）。</p>
+</div>
+
+<h2 id="pipeline">Pipeline API——最简单的入口</h2>
+<p>Pipeline 是 transformers 的"一键式"接口——你指定任务名，它自动加载合适的模型和分词器：</p>
+
+<pre><code>from transformers import pipeline
+
+# 创建情感分析 pipeline（一行代码）
+分类器 = pipeline("sentiment-analysis")
+
+# 直接使用
+结果 = 分类器("今天天气真好啊")
+print(结果)
+# [{'label': 'POSITIVE', 'score': 0.998}]</code></pre>
+
+<div class="info-box">
+  <strong>🔍 pipeline() 背后做了什么？</strong>
+  <ol>
+    <li>根据任务名 "sentiment-analysis" 自动选择一个默认模型（通常是 distilbert-base-uncased-finetuned-sst-2-english）</li>
+    <li>从 Hugging Face Hub 下载模型和分词器（首次运行需联网下载）</li>
+    <li>把输入文本转成模型能理解的数字（tokenize）</li>
+    <li>运行模型，得到预测结果</li>
+    <li>把数字结果转回人类可读的标签和分数</li>
+  </ol>
+</div>
+
+<h2 id="tasks">支持的任务</h2>
+<table>
+  <tr><th>任务名</th><th>作用</th><th>示例</th></tr>
+  <tr><td><code>"sentiment-analysis"</code></td><td>情感分析</td><td>"电影太棒了" → POSITIVE</td></tr>
+  <tr><td><code>"text-generation"</code></td><td>文本生成</td><td>"从前有座山" → "山里有座庙"</td></tr>
+  <tr><td><code>"summarization"</code></td><td>摘要</td><td>长文 → 一句话概括</td></tr>
+  <tr><td><code>"translation"</code></td><td>翻译</td><td>"Hello" → "你好"</td></tr>
+  <tr><td><code>"fill-mask"</code></td><td>完形填空</td><td>"我今天去&lt;MASK&gt;" → "上班"</td></tr>
+  <tr><td><code>"question-answering"</code></td><td>问答</td><td>根据文章回答问题</td></tr>
+  <tr><td><code>"zero-shot-classification"</code></td><td>零样本分类</td><td>不用训练，直接分类到自定义类别</td></tr>
+  <tr><td><code>"ner"</code></td><td>命名实体识别</td><td>识别出人名、地名、组织</td></tr>
+  <tr><td><code>"image-classification"</code></td><td>图片分类</td><td>"这张图是猫还是狗"</td></tr>
+  <tr><td><code>"automatic-speech-recognition"</code></td><td>语音识别</td><td>音频 → 文字</td></tr>
+</table>
+
+<h2 id="first">动手：第一个 Pipeline</h2>
+<pre><code>from transformers import pipeline
+
+# ── 情感分析 ──
+分类器 = pipeline("sentiment-analysis")
+print(分类器("这个产品太好用了！"))
+print(分类器("质量很差，不值这个价"))
+
+# ── 文本生成 ──
+生成器 = pipeline("text-generation", model="distilgpt2")
+print(生成器("人工智能的未来是", max_length=30, num_return_sequences=2))
+
+# ── 零样本分类 ──
+零样本 = pipeline("zero-shot-classification")
+结果 = 零样本(
+    "我想学一门编程语言，容易上手且能找到工作",
+    candidate_labels=["Python", "Java", "C++", "Rust"]
+)
+print(结果)</code></pre>
+
+<h2 id="practice">动手练习</h2>
+<div class="exercise">
+  <h3>🎯 安装并跑通第一个模型</h3>
+  <ol class="steps">
+    <li><strong>安装</strong><pre><code>pip install transformers torch</code></pre></li>
+    <li><strong>运行情感分析</strong><p>复制上面的"第一个 Pipeline"代码，保存为 <code>test_pipeline.py</code> 并运行。</p></li>
+    <li><strong>换个任务试试</strong><p>把任务改成 <code>"fill-mask"</code>，看看完形填空的效果。</p></li>
+  </ol>
+</div>
+
+<h2>课后推荐阅读</h2>
+<ul>
+  <li><a href="https://huggingface.co/docs/transformers/quicktour" target="_blank">官方 Quick Tour</a> — 5 分钟快速上手</li>
+  <li><a href="https://huggingface.co/docs/transformers/pipeline_tutorial" target="_blank">Pipeline 教程</a> — 所有支持的任务详解</li>
+  <li><a href="https://github.com/huggingface/transformers" target="_blank">GitHub 仓库</a> — 源码和示例</li>
+</ul>
+
+<p>下一课讲<strong>常用场景</strong>——文本分类、生成、翻译、摘要等任务的详细用法。</p>
+<script src="../../assets/nav.js"></script>
+</body>
+</html>

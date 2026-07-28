@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OmniRoute L4: MCP + 编程代理集成</title>
+  <link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">OmniRoute · Lesson 4 / 6</div>
+  <h1 class="lesson-title">MCP + 编程代理集成</h1>
+  <p class="lesson-subtitle">中转站实战</p>
+</div>
+
+<blockquote>OmniRoute 自带了<strong>一个 MCP 服务器（94 个工具）和一个 A2A 代理协议</strong>。这一课教你如何把 Claude Code（以及你学过的其他工具）接入 OmniRoute，让它成为你所有 AI 操作的"总开关"。</blockquote>
+
+<h2 id="connect">把 Claude Code 接入 OmniRoute</h2>
+<p>这是最直接的用法——让 Claude Code 通过 OmniRoute 访问模型：</p>
+<pre><code># 启动 OmniRoute
+omniroute
+
+# 在 Claude Code 中配置
+# ~/.claude/settings.json
+{
+  "model": "auto/coding",
+  "apiEndpoint": "http://localhost:20128/v1"
+}
+
+# 或者使用自动配置命令
+omniroute setup-claude-code</code></pre>
+<p>Claude Code 的所有请求都会经过 OmniRoute，自动享受故障转移、压缩、成本优化。</p>
+
+<h2 id="mcp">OmniRoute 的 MCP 服务器</h2>
+<p>OmniRoute 自带一个功能完整的 MCP 服务器（94 个工具、30 个范围、完整审计追踪）：</p>
+
+<table>
+  <tr><th>传输方式</th><th>端点</th></tr>
+  <tr><td>stdio</td><td><code>omniroute --mcp</code></td></tr>
+  <tr><td>HTTP</td><td><code>http://localhost:20128/api/mcp/stream</code></td></tr>
+  <tr><td>SSE</td><td><code>http://localhost:20128/api/mcp/sse</code></td></tr>
+</table>
+
+<p>在 Claude Code 中连接：</p>
+<pre><code>claude mcp add-server omniroute \
+  --type http \
+  --url http://localhost:20128/api/mcp/stream</code></pre>
+
+<p>MCP 工具覆盖：提供商管理、组合管理、缓存操作、健康检查、配额监控等。</p>
+
+<h2 id="setup-all">一键配置所有工具</h2>
+<p>OmniRoute 提供 <code>setup-*</code> 系列命令，一键配置各种编程工具：</p>
+<pre><code>omniroute setup-claude-code   # 配置 Claude Code
+omniroute setup-codex          # 配置 Codex CLI
+omniroute setup-cursor         # 配置 Cursor
+omniroute setup-copilot        # 配置 GitHub Copilot
+omniroute setup-celine         # 配置 Cline / Roo Code
+omniroute setup-aider          # 配置 Aider
+omniroute setup-opencode       # 配置 OpenCode</code></pre>
+
+<h2 id="a2a">A2A 代理协议</h2>
+<p>OmniRoute 还支持 Google 的 A2A（Agent-to-Agent）协议，让多个 AI 代理直接通信协作：</p>
+<ul>
+  <li>端点：<code>http://localhost:20128/.well-known/agent.json</code></li>
+  <li>协议：JSON-RPC 2.0 + SSE</li>
+  <li>6 个内置 A2A skill，用于代理间通信</li>
+</ul>
+
+<h2 id="multi">多工具共享一个网关</h2>
+<p>一个 OmniRoute 实例可以同时服务多个工具——每个工具只需指向同一个 <code>localhost:20128</code>：</p>
+<pre><code>Claude Code  → http://localhost:20128/v1  ← 模型: auto/coding
+Cursor       → http://localhost:20128/v1  ← 模型: auto/fast
+Copilot      → http://localhost:20128/v1  ← 模型: auto/cheap</code></pre>
+
+<h2 id="practice">动手练习</h2>
+<div class="exercise">
+  <h3>🎯 把 Claude Code 接入 OmniRoute</h3>
+  <ol class="steps">
+    <li><strong>确认 OmniRoute 在运行</strong><pre><code>omniroute</code></pre></li>
+    <li><strong>配置 Claude Code</strong><pre><code>omniroute setup-claude-code</code></pre></li>
+    <li><strong>验证</strong><p>在 Claude Code 中问一个问题，观察 OmniRoute 仪表板中出现请求记录。</p></li>
+    <li><strong>添加第二个工具</strong><p>如果有 Cursor 或 Continue，用对应的 setup 命令接入同一个 OmniRoute。</p></li>
+  </ol>
+</div>
+
+<h2>关键要点</h2>
+<div class="banner banner-success">
+  <ul>
+    <li>Claude Code 只需配置 apiEndpoint 即可接入 OmniRoute</li>
+    <li>OmniRoute 自带 MCP 服务器（94 工具），可通过 HTTP/SSE/stdio 连接</li>
+    <li>setup-* 系列命令一键配置所有主流编程工具</li>
+    <li>一个 OmniRoute 实例可同时服务多个工具，各自指定不同模型</li>
+    <li>A2A 协议支持代理间直接通信协作</li>
+  </ul>
+</div>
+
+<h2>课后推荐阅读</h2>
+<ul>
+  <li><a href="https://github.com/diegosouzapw/OmniRoute" target="_blank">GitHub 仓库</a> — MCP 服务器配置</li>
+  <li><a href="https://omniroute.online" target="_blank">官网</a> — 工具集成指南</li>
+</ul>
+
+<p>下一课讲<strong>CLI 与运维</strong>——80+ 命令的玩法。</p>
+<script src="../../assets/nav.js"></script>
+</body>
+</html>

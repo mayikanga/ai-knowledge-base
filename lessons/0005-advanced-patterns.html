@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lesson 5: 高级模式 — 组合的艺术</title>
+  <link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">Lesson 5 / 6</div>
+  <h1 class="lesson-title">高级模式</h1>
+  <p class="lesson-subtitle">组合的艺术</p>
+</div>
+
+<blockquote>
+  Mission 关联：前四课你学会了四种独立武器——hooks（自动化）、skills（复用）、subagents（分工）、workflows（编排）。
+  这一课将教你如何<strong>把它们组合起来</strong>，构建真正强大的开发工作流。
+</blockquote>
+
+<h2 id="adv-intro">从"会用"到"会组合"</h2>
+
+<p>
+  单独使用 hooks、skills、agents、workflows 已经很强大，但真正的进阶是理解它们如何<strong>协同工作</strong>。
+  就像学音乐：单个音符有意义，但和弦才是音乐的开始。
+</p>
+
+<div class="info-box">
+  <strong>💡 核心思维：分层架构</strong>
+  <p>每个功能都有自己的"关注层"：</p>
+  <ul>
+    <li><strong>Hook</strong> — 系统层：事件驱动的自动化，无条件执行</li>
+    <li><strong>Skill</strong> — 任务层：可复用的知识/流程包，按需加载</li>
+    <li><strong>Subagent</strong> — 执行层：隔离的工作器，独立上下文</li>
+    <li><strong>Workflow</strong> — 编排层：协调多个执行器的"项目经理"</li>
+  </ul>
+  它们不是互相替代的关系，而是<strong>互补的层次</strong>。
+</div>
+
+<h2 id="adv-patterns">六大高级模式</h2>
+
+<h3 id="adv-pattern-1">模式一：Build Order（基础设施建设顺序）</h3>
+
+<p>这是最重要的模式——从零到一地搭建 Claude Code 配置体系：</p>
+
+<pre><code>Step 1 ─ Foundation      CLAUDE.md + permissions
+         让 Claude 知道项目是什么、能做什么不能做什么
+
+Step 2 ─ Core Tooling    plugins → MCP servers → hooks
+         搭建基础设施：连接数据库、注册事件监听
+
+Step 3 ─ Project Logic   custom skills → subagents
+         写业务逻辑：打包常用流程、创建专用工作器
+
+Step 4 ─ Orchestration   workflows → CI/CD integration
+         编排和工作流：多个 agent 协作、接入 CI 流水线
+
+⚠️ 不要跳步：连 permissions 都没配好就写 workflow，会到处碰壁</code></pre>
+
+<h3 id="adv-pattern-2">模式二：Skill + Hook 守卫</h3>
+
+<p>给特定 skill 绑定专属 hooks，实现"技能级安全隔离"：</p>
+
+<pre><code>---
+name: dangerous-db-operation
+hooks:
+  PreToolUse: ./hooks/db-guard.sh  ← 只在执行此 skill 时触发
+  PostToolUse: ./hooks/db-audit.sh ← 记录操作日志
+---
+
+# ... 数据库操作步骤 ...</code></pre>
+
+<p>对比全局 hook：全局 hook 对所有事件生效，skill 级 hook 只在特定技能被调用时触发。<br>
+这比在 CLAUDE.md 里写"小心操作数据库"要可靠得多——hook 是强制性的。</p>
+
+<h3 id="adv-pattern-3">模式三：Skill → Subagent → Workflow 链条</h3>
+
+<p>最推荐的架构模式——Command → Agent → Skill：</p>
+
+<pre><code>用户输入 /audit
+  └─ skill (audit) 被激活
+      └─ 在 SKILL.md 中描述任务
+          └─ Claude 根据 description 自动匹配
+              └─ 启动 workflow 脚本
+                  ├─ agent() 安全性审查
+                  ├─ agent() 性能审查
+                  └─ agent() 代码质量审查
+                      └─ 每个 agent 可以加载自己的 skill</code></pre>
+
+<p>这种嵌套结构的好处是：每层只关心自己的职责，上层不关心下层的实现细节。</p>
+
+<h3 id="adv-pattern-4">模式四：Adversarial Review（对抗验证）</h3>
+
+<p>先找问题，再让 skeptics 质疑每个发现，只有通过质疑的才保留：</p>
+
+<pre><code>const results = await pipeline(
+  DIMENSIONS,
+  d => agent(d.prompt, {phase: "Find", schema: FINDINGS_SCHEMA}),
+  review => parallel(review.findings.map(f => () =>
+    agent(`质疑：${f.title}。默认 refuted=true`, {phase: "Verify", schema: VERDICT_SCHEMA})
+      .then(v => ({...f, survives: !v.refuted}))
+  ))
+)
+
+const confirmed = results.flat().filter(f => f && f.survives)
+// 幸存者才是真正值得关注的发现</code></pre>
+
+<p>关键技巧：提示词写"默认 refuted=true"——让验证者默认持怀疑态度,只确认真正有问题的不被放过。</p>
+
+<h3 id="adv-pattern-5">模式五：Multi-Modal Sweep（多角度扫描）</h3>
+
+<p>同一个问题从多个完全不同的角度同时搜索，防止单一视角遗漏：</p>
+
+<pre><code>const FINDERS = [
+  {key: "by-pattern", prompt: "Search for XSS patterns in template files"},
+  {key: "by-dataflow", prompt: "Trace user input from entry points to sinks"},
+  {key: "by-history", prompt: "Review git log for security-related commits"},
+  {key: "by-dependency", prompt: "Check known vulnerabilities in dependencies"},
+]
+
+const results = await parallel(FINDERS.map(f => () =>
+  agent(f.prompt, {label: f.key, schema: FINDINGS_SCHEMA})
+))
+
+const allFindings = dedupe(results.flat().filter(Boolean))
+// 四个角度汇总，去重后得到完整的发现列表</code></pre>
+
+<p>设计原则：每个 finder 对彼此完全"盲"——不知道其他 finder 在干什么，不会互相影响。</p>
+
+<h3 id="adv-pattern-6">模式六：Judge Panel（裁判评审）</h3>
+
+<p>多个独立的 agent 从不同价值观出发各做一个方案，然后由裁判 agent 综合选出最佳：</p>
+
+<pre><code>const attempts = await parallel([
+  () => agent("MVP-first: 最快的可行方案"),
+  () => agent("Security-first: 最安全的实现"),
+  () => agent("Performance-first: 最高性能的设计"),
+])
+
+const best = await agent(`综合以下三个方案，选最优并融合亮点：
+  --- 方案 A ---
+  ${attempts[0]}
+  --- 方案 B ---
+  ${attempts[1]}
+  --- 方案 C ---
+  ${attempts[2]}
+
+输出最终方案，标注各灵感的来源。`, {schema: FINAL_SCHEMA})</code></pre>
+
+<p>适用场景：架构决策、技术选型、代码重构方案等没有"标准答案"的问题。</p>
+
+<h2 id="adv-comparison">模式选择速查</h2>
+
+<table>
+  <tr>
+    <th>场景</th>
+    <th>推荐模式</th>
+    <th>理由</th>
+  </tr>
+  <tr>
+    <td>从零搭建配置</td>
+    <td><strong>Build Order</strong></td>
+    <td>避免跳步导致的连锁问题</td>
+  </tr>
+  <tr>
+    <td>特定 skill 需要额外安全检查</td>
+    <td><strong>Skill + Hook 守卫</strong></td>
+    <td>hook 是强制性的，比 CLAUDE.md 可靠</td>
+  </tr>
+  <tr>
+    <td>一键式复杂任务</td>
+    <td><strong>Skill → Subagent → Workflow</strong></td>
+    <td>分层清晰，每层只关心自己的事</td>
+  </tr>
+  <tr>
+    <td>高可信度的代码审查</td>
+    <td><strong>Adversarial Review</strong></td>
+    <td>先发现再质疑，过滤误报</td>
+  </tr>
+  <tr>
+    <td>安全审计/全面扫描</td>
+    <td><strong>Multi-Modal Sweep</strong></td>
+    <td>多角度覆盖，防止漏检</td>
+  </tr>
+  <tr>
+    <td>没有标准答案的设计决策</td>
+    <td><strong>Judge Panel</strong></td>
+    <td>多视角方案 → 择优融合</td>
+  </tr>
+</table>
+
+<h2 id="adv-context">上下文管理策略</h2>
+
+<p>随着配置越来越复杂，上下文管理变得至关重要：</p>
+
+<table>
+  <tr>
+    <th>策略</th>
+    <th>做法</th>
+    <th>效果</th>
+  </tr>
+  <tr>
+    <td><strong>分散加载</strong></td>
+    <td>Skill 的 description 轻量（仅在需要时加载全文）</td>
+    <td>上下文只在需要时消耗</td>
+  </tr>
+  <tr>
+    <td><strong>disable-model-invocation</strong></td>
+    <td>Reference skill 设为 <code>true</code>，不自动加载</td>
+    <td>零上下文开销</td>
+  </tr>
+  <tr>
+    <td><strong>Subagent 隔离</strong></td>
+    <td>复杂任务丢给 subagent，结果只返回摘要</td>
+    <td>主上下文不被污染</td>
+  </tr>
+  <tr>
+    <td><strong>手动压缩</strong></td>
+    <td>上下文用到 ~50% 时主动 compact</td>
+    <td>延长会话寿命</td>
+  </tr>
+  <tr>
+    <td><strong>Workflow resume</strong></td>
+    <td>中断后可恢复，已完成步骤返回缓存</td>
+    <td>不浪费已消耗的 token</td>
+  </tr>
+</table>
+
+<div class="banner banner-warning">
+  <strong>⚠️ 常见陷阱：过度加载</strong><br>
+  很多人一开始把所有 skill 都设为 <code>user-invocable: true</code> 且不设 <code>disable-model-invocation</code>。
+  结果每次会话都要加载所有 description，消耗大量上下文。<br>
+  正确做法：reference skill 设 <code>disable-model-invocation: true</code>，只加载真正需要的。
+</div>
+
+<h2 id="adv-rule">一个可靠的决策法则</h2>
+
+<p>当你犹豫"这个功能应该用哪个实现"时，试试这个 check-list：</p>
+
+<pre><code>Claude 重复做错了什么？
+  → 加到 CLAUDE.md 或 rules/
+
+你一直在重复输入同样的提示词？
+  → 保存为 skill
+
+第三次粘贴同样的操作步骤？
+  → 打包成 skill 或命令
+
+Claude 需要从浏览器复制数据？
+  → 连 MCP server
+
+读大量文件找符号？
+  → 安装代码智能插件
+
+临时任务污染了主会话？
+  → 用 subagent 隔离
+
+想让某件事每次必定发生？
+  → 写 hook
+
+第二个项目需要同样的配置？
+  → 打包为 plugin</code></pre>
+
+<h2 id="adv-debug">调试技巧</h2>
+
+<table>
+  <tr>
+    <th>问题</th>
+    <th>排查方法</th>
+  </tr>
+  <tr>
+    <td>Hook 不触发</td>
+    <td>检查 matcher 语法，确认事件名拼写正确，查看终端输出</td>
+  </tr>
+  <tr>
+    <td>Skill 找不到</td>
+    <td>检查 <code>.claude/skills/name/SKILL.md</code> 路径和 frontmatter 格式</td>
+  </tr>
+  <tr>
+    <td>Agent 不自动触发</td>
+    <td>检查 description 是否精准，试试用 <code>@name</code> 手动调用</td>
+  </tr>
+  <tr>
+    <td>Workflow 异常</td>
+    <td>运行 <code>/doctor</code> 诊断，检查 workflow 脚本的 meta 块是否为纯字面量</td>
+  </tr>
+  <tr>
+    <td>权限弹窗太多</td>
+    <td>在 settings.json 的 <code>permissions</code> 中添加 allow 规则</td>
+  </tr>
+</table>
+
+<h2 id="adv-practice">动手练习</h2>
+
+<div class="exercise">
+  <h3>🎯 练习：搭建一个完整的代码审查流水线</h3>
+
+  <p><strong>场景：</strong>结合 L1-L5 的全部知识，搭建一条完整的审查流水线。</p>
+  <p><strong>步骤：</strong></p>
+
+  <ol class="steps">
+    <li>
+      <strong>回顾已有配置</strong>
+      <p>打开 <code>~/.claude/settings.json</code>，看看你目前配了哪些 hooks 和 permissions。</p>
+    </li>
+    <li>
+      <strong>创建一个 security-audit skill</strong>
+      <p>把"安全检查流程"打包成一个 skill（参考 L2 的格式），包含检查 checklist。</p>
+    </li>
+    <li>
+      <strong>创建一个 security-auditor subagent</strong>
+      <p>给它只读权限（<code>disallowedTools: Write, Edit, Bash</code>），加载 security-audit skill。</p>
+    </li>
+    <li>
+      <strong>添加全局 hook</strong>
+      <p>在 <code>PreToolUse</code> 中添加一个"危险命令守卫"hook（参考 L1）。</p>
+    </li>
+    <li>
+      <strong>写一个 workflow 编排</strong>
+      <p>启动 3 个并行 agent 分别做安全/性能/质量审查，汇总结果（参考 L4 的 pipeline 模式）。</p>
+    </li>
+  </ol>
+
+  <p><strong>完成后，你就有了一个完整的审查流水线</strong>：</p>
+  <ul>
+    <li>Hook 层：自动拦截危险操作</li>
+    <li>Skill 层：可复用的审查流程</li>
+    <li>Agent 层：专业的审查工作器</li>
+    <li>Workflow 层：一键启动的编排脚本</li>
+  </ul>
+</div>
+
+<h2 id="adv-summary">本课关键洞察</h2>
+
+<div class="banner banner-success">
+  <strong>💡 五个层次的关系</strong>
+  <ol>
+    <li><strong>CLAUDE.md</strong> — 告诉 Claude"要知道什么"（建议性）</li>
+    <li><strong>Hook</strong> — 让 Claude"必须做什么"（强制性）</li>
+    <li><strong>Skill</strong> — 让 Claude"会做什么"（按需加载）</li>
+    <li><strong>Subagent</strong> — 让"谁去做"（隔离分工）</li>
+    <li><strong>Workflow</strong> — 让"怎样协作"（编排调度）</li>
+  </ol>
+  这五层从"知识"到"执行"到"协作"，每一层解决不同的问题。
+</div>
+
+<h2>课后推荐阅读</h2>
+
+<ul>
+  <li><a href="../lessons/0001-hooks-basics.html">回顾 L1: Hooks 入门</a></li>
+  <li><a href="../lessons/0002-custom-skills.html">回顾 L2: Custom Skills</a></li>
+  <li><a href="../lessons/0003-custom-subagents.html">回顾 L3: 自定义 Subagent</a></li>
+  <li><a href="../lessons/0004-workflows.html">回顾 L4: Workflow 编排</a></li>
+  <li><a href="../reference/glossary.html">术语速查表</a></li>
+</ul>
+
+<h2>📌 别忘了</h2>
+<p>高级模式不是新功能，而是<strong>已有功能的组合</strong>。关键不在于知道每个功能怎么用，而在于判断<strong>什么时候用什么</strong>。</p>
+<p>有问题随时问！下一课就是最后一课——<strong>实战整合</strong>，把整个课程体系串成一个真实项目。</p>
+
+<script src="../assets/nav.js"></script>
+</body>
+</html>

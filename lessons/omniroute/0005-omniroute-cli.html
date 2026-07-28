@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OmniRoute L5: CLI 与运维 — 80+ 命令</title>
+  <link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">OmniRoute · Lesson 5 / 6</div>
+  <h1 class="lesson-title">CLI 与运维</h1>
+  <p class="lesson-subtitle">80+ 命令的玩法</p>
+</div>
+
+<blockquote>OmniRoute 不只是一个网关——它还自带一个功能完整的 CLI（80+ 命令）和一个 Web 仪表板。这一课带你覆盖最常用的运维操作：提供商管理、组合管理、缓存、健康监控、远程管理等。</blockquote>
+
+<h2 id="core">核心命令</h2>
+<table>
+  <tr><th>命令</th><th>作用</th></tr>
+  <tr><td><code>omniroute</code></td><td>启动网关 + 仪表板</td></tr>
+  <tr><td><code>omniroute chat</code></td><td>交互式 TUI 聊天客户端</td></tr>
+  <tr><td><code>omniroute setup</code></td><td>引导式首次配置向导</td></tr>
+  <tr><td><code>omniroute doctor</code></td><td>诊断提供商、端口、原生依赖</td></tr>
+</table>
+
+<h2 id="categories">命令分类</h2>
+<table>
+  <tr><th>类别</th><th>命令前缀</th><th>示例</th></tr>
+  <tr><td>提供商</td><td><code>omniroute providers</code></td><td><code>providers list</code>, <code>providers add</code></td></tr>
+  <tr><td>组合</td><td><code>omniroute combo</code></td><td><code>combo create</code>, <code>combo list</code></td></tr>
+  <tr><td>模型</td><td><code>omniroute models</code></td><td><code>models list</code>, <code>models search</code></td></tr>
+  <tr><td>缓存</td><td><code>omniroute cache</code></td><td><code>cache clear</code>, <code>cache stats</code></td></tr>
+  <tr><td>成本</td><td><code>omniroute cost</code></td><td><code>cost report</code>, <code>cost forecast</code></td></tr>
+  <tr><td>使用量</td><td><code>omniroute usage</code></td><td><code>usage today</code>, <code>usage top</code></td></tr>
+  <tr><td>配额</td><td><code>omniroute quota</code></td><td><code>quota check</code>, <code>quota share</code></td></tr>
+  <tr><td>健康</td><td><code>omniroute health</code></td><td><code>health check</code>, <code>health dashboard</code></td></tr>
+  <tr><td>日志</td><td><code>omniroute logs</code></td><td><code>logs tail</code>, <code>logs search</code></td></tr>
+  <tr><td>MCP</td><td><code>omniroute mcp</code></td><td><code>mcp tools</code>, <code>mcp start</code></td></tr>
+  <tr><td>内存</td><td><code>omniroute memory</code></td><td><code>memory store</code>, <code>memory search</code></td></tr>
+  <tr><td>备份</td><td><code>omniroute backup</code></td><td><code>backup create</code>, <code>backup restore</code></td></tr>
+  <tr><td>Tunnel</td><td><code>omniroute tunnel</code></td><td><code>tunnel create</code>, <code>tunnel list</code></td></tr>
+</table>
+
+<h2 id="remote">远程管理</h2>
+<p>用 scoped token 从任何机器管理远程 OmniRoute 实例：</p>
+<pre><code>omniroute connect 192.168.0.15     # 密码 → scoped token
+omniroute models list              # 针对远程服务器执行
+omniroute tokens create --name ci --scope read   # 创建更窄的 token
+omniroute contexts use default     # 切回本地</code></pre>
+
+<h2 id="dashboard">Web 仪表板</h2>
+<p>浏览器打开 <code>http://localhost:20128</code>，可视化操作所有功能：</p>
+<ul>
+  <li>提供商状态面板 — 实时健康监控</li>
+  <li>请求实时流 — 看到每个请求的路由</li>
+  <li>成本分析 — 按提供商/模型/工具的费用 breakdown</li>
+  <li>压缩工作室 — 拖拽排序 10 引擎管线</li>
+  <li>组合设计器 — 可视化创建和测试路由组合</li>
+  <li>配额仪表板 — 免费额度剩余多少一目了然</li>
+</ul>
+
+<h2 id="deploy">部署方式</h2>
+<table>
+  <tr><th>方式</th><th>命令</th></tr>
+  <tr><td>npm 全局安装</td><td><code>npm install -g omniroute && omniroute</code></td></tr>
+  <tr><td>Docker</td><td><code>docker run diegosouzapw/omniroute</code></td></tr>
+  <tr><td>桌面应用 (Electron)</td><td><code>npm run electron:build</code></td></tr>
+  <tr><td>Android (Termux)</td><td><code>pkg install nodejs && npx -y omniroute</code></td></tr>
+  <tr><td>Arch Linux (AUR)</td><td><code>yay -S omniroute-bin</code></td></tr>
+  <tr><td>PWA</td><td>浏览器"添加到主屏幕"</td></tr>
+</table>
+
+<h2 id="practice">动手练习</h2>
+<div class="exercise">
+  <h3>🎯 探索 CLI</h3>
+  <ol class="steps">
+    <li><strong>运行诊断</strong><pre><code>omniroute doctor</code></pre></li>
+    <li><strong>查看提供商</strong><pre><code>omniroute providers list</code></pre></li>
+    <li><strong>查看使用量</strong><pre><code>omniroute usage today</code></pre></li>
+    <li><strong>打开仪表板</strong><p>浏览器打开 <code>http://localhost:20128</code>，浏览各面板。</p></li>
+  </ol>
+</div>
+
+<h2>关键要点</h2>
+<div class="banner banner-success">
+  <ul>
+    <li>核心命令：start、chat、setup、doctor</li>
+    <li>80+ 命令覆盖提供商/组合/缓存/成本/健康等所有维度</li>
+    <li>远程管理用 <code>omniroute connect</code> + scoped token</li>
+    <li>Web 仪表板提供可视化操作，和 CLI 互补</li>
+    <li>支持 6+ 部署方式（npm/Docker/Desktop/Termux/PWA）</li>
+  </ul>
+</div>
+
+<h2>课后推荐阅读</h2>
+<ul>
+  <li><a href="https://github.com/diegosouzapw/OmniRoute" target="_blank">GitHub 仓库</a> — CLI 命令参考</li>
+  <li><a href="https://omniroute.online" target="_blank">官网</a> — 部署和运维文档</li>
+</ul>
+
+<p>最后一课<strong>实战：搭建 $0 开发环境</strong>——把所有知识串起来。</p>
+<script src="../../assets/nav.js"></script>
+</body>
+</html>

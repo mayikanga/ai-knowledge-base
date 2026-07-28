@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Matt Pocock L3: 进阶技巧 — Handoff / Wayfinder / 架构</title>
+  <link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">Matt Pocock · Lesson 3 / 3</div>
+  <h1 class="lesson-title">进阶技巧</h1>
+  <p class="lesson-subtitle">Handoff / Wayfinder / 架构改进</p>
+</div>
+
+<blockquote>
+  L2 你学会了"CORE 三板斧"——grill、tdd、review。这课深入 <strong>跨会话协作</strong>（handoff）、
+  <strong>大规模规划</strong>（wayfinder）、<strong>架构保卫战</strong>（improve-codebase-architecture），
+  以及各技能如何<strong>组合使用</strong>。
+</blockquote>
+
+<h2 id="handoff">/handoff：跨会话交接</h2>
+<p>
+  这是<strong>AI 开发中最容易被忽视但最关键的能力</strong>——一个会话的上下文怎么交给下一个会话。
+</p>
+
+<div class="info-box">
+  <strong>💡 场景</strong>
+  <p>你今天写到一半下班了，明天 Claude Code 新会话不记得昨天讨论了什么。/handoff 把当前会话压缩成一份结构化的交接文档，下个会话直接读取。</p>
+</div>
+
+<h3>它会生成什么</h3>
+<ul>
+  <li><strong>当前状态</strong> — 做了什么、到什么阶段</li>
+  <li><strong>未完成的工作</strong> — 下一步要做什么</li>
+  <li><strong>关键决策</strong> — 重要的权衡和选择</li>
+  <li><strong>注意事项</strong> — 坑、边界情况、已知问题</li>
+  <li><strong>相关链接</strong> — Issue、PR、文档引用</li>
+</ul>
+
+<h3>和 CLAUDE.md 的区别</h3>
+<table>
+  <tr><th></th><th>CLAUDE.md</th><th>/handoff</th></tr>
+  <tr><td>用途</td><td>项目级持久规范</td><td>会话级临时交接</td></tr>
+  <tr><td>内容</td><td>编码规范、约定、配置</td><td>当前进度、决策、待办</td></tr>
+  <tr><td>更新频率</td><td>偶尔改</td><td>每次会话结束</td></tr>
+  <tr><td>谁维护</td><td>项目所有者</td><td>AI + 你协作更新</td></tr>
+</table>
+
+<h2 id="wayfinder">/wayfinder：跨会话大规模规划</h2>
+<p>
+  当一个任务<strong>明显超过一个会话能完成的范围</strong>时，Wayfinder 帮你把大块工作拆解为一系列"调查任务"（investigation tickets）。
+  每个 ticket 可以在一个会话内完成，完成后向下一个推进。
+</p>
+
+<h3>工作流</h3>
+<pre><code>大目标（如"重构整个认证系统"）
+  ↓
+/wayfinder 拆解为调查任务：
+  ├─ 任务1：分析当前认证流程
+  ├─ 任务2：设计新架构方案
+  ├─ 任务3：实现核心接口
+  ├─ 任务4：迁移现有用户
+  └─ 任务5：清理旧代码
+  ↓
+逐个解决，每个任务一个会话
+  ↓
+全部完成 → 目标达成</code></pre>
+
+<div class="banner banner-success">
+  <strong>💡 和 Claude Code Workflow 的关系</strong>
+  <p>你在 CC L4 学过 Workflow 编排（多个 subagent 并行）。Wayfinder 是相反的思路——<strong>把大任务纵向拆成多个串行会话</strong>。</p>
+  <p>两者互补：Wayfinder 决定<strong>做什么顺序</strong>，Workflow 决定<strong>一个会话内怎么并行</strong>。</p>
+</div>
+
+<h2 id="architecture">/improve-codebase-architecture：架构保卫战</h2>
+<p>
+  Matt Pocock 引用 Kent Beck："<em>Invest in the design of the system every day.</em>"
+  这个技能就是定期扫描代码库，找出<strong>设计深化机会</strong>。
+</p>
+
+<h3>它能发现什么</h3>
+<ul>
+  <li><strong>模块边界模糊</strong> —— 哪些模块该拆分却混在一起</li>
+  <li><strong>接口过于宽泛</strong> —— 哪些模块暴露了太多内部细节</li>
+  <li><strong>缺少抽象</strong> —— 哪些重复模式可以提取为通用抽象</li>
+  <li><strong>依赖方向错误</strong> —— 哪些模块依赖了不该依赖的</li>
+</ul>
+
+<p>生成一份可视化的 HTML 报告，然后让你选择从哪个改进点开始。</p>
+
+<div class="banner banner-warning">
+  <strong>⚠️ 使用频率</strong>
+  <p>官方建议：<strong>每几天跑一次</strong>。不是每日必做，而是定期"体检"。</p>
+  <p>搭配 <code>/domain-modeling</code> 一起用效果更好——先理清领域模型，再检查实现是否偏离。</p>
+</div>
+
+<h2 id="combo">技能组合路线图</h2>
+
+<p>这些技能不是孤立的，Matt Pocock 设计了清晰的调用链：</p>
+
+<pre><code>新项目 / 新功能
+  ↓
+/grill-with-docs   ← 先对齐需求，建立 CONTEXT.md
+  ↓
+/to-spec           ← 把对齐后的需求写成规格
+  ↓
+/to-tickets        ← 拆成带依赖的任务
+  ↓
+/implement         ← 驱动 /tdd 实现
+  ↓                  （每次迭代自动调 /tdd）
+/code-review       ← 双轴审查后提交
+  ↓
+（下一个任务...）
+  ↓
+定期：/improve-codebase-architecture
+       /domain-modeling
+       /handoff（会话结束时）</code></pre>
+
+<h2 id="to-spec-tickets">/to-spec 和 /to-tickets</h2>
+<table>
+  <tr><th>技能</th><th>输入</th><th>输出</th></tr>
+  <tr><td><code>/to-spec</code></td><td>当前对话讨论的需求</td><td>结构化的规格文档（可发布到 Issue Tracker）</td></tr>
+  <tr><td><code>/to-tickets</code></td><td>规格或对话</td><td>带阻塞依赖关系的 tracer-bullet tickets</td></tr>
+</table>
+
+<p>/to-tickets 特别之处：它生成的 ticket 之间标注了<strong>阻塞依赖</strong>（哪个 ticket 等哪个完成后才能开始），这对多会话规划至关重要。</p>
+
+<h2 id="practice">动手练习</h2>
+<div class="exercise">
+  <h3>🎯 完整流程演练</h3>
+  <ol class="steps">
+    <li><strong>规划一个大功能</strong><p>用 <code>/wayfinder</code> 规划一个你觉得需要 3+ 会话才能完成的功能。</p></li>
+    <li><strong>结束后 handoff</strong><p>一个会话结束时运行 <code>/handoff</code>，生成交接文档。</p></li>
+    <li><strong>新会话读取 handoff</strong><p>新会话中读取 handoff 文档，看看是否清晰。</p></li>
+    <li><strong>架构体检</strong><p>在项目中运行 <code>/improve-codebase-architecture</code>，看看它发现了什么。</p></li>
+  </ol>
+</div>
+
+<h2>课程总结</h2>
+<div class="banner banner-success">
+  <strong>🎉 3 课完成！</strong>
+  <ul>
+    <li><strong>L1:</strong> 安装配置 + 技能全景</li>
+    <li><strong>L2:</strong> Grill（需求对齐）+ TDD（测试驱动）+ Review（双轴审查）</li>
+    <li><strong>L3:</strong> Handoff（跨会话交接）+ Wayfinder（大规模规划）+ 架构改进</li>
+  </ul>
+  <p>你现在可以：把 Matt Pocock Skills 装到你的 Claude Code 中，用它来驱动真实工程开发。</p>
+</div>
+
+<h2>课后推荐阅读</h2>
+<ul>
+  <li><a href="https://github.com/mattpocock/skills" target="_blank">GitHub 仓库</a> — /handoff、/wayfinder 源码</li>
+  <li><a href="https://github.com/mattpocock/skills/blob/main/skills/engineering/handoff/SKILL.md" target="_blank">/handoff 技能源码</a> — 学习怎么写交接文档 skill</li>
+</ul>
+
+<h2>继续深入</h2>
+<ul>
+  <li><a href="https://github.com/mattpocock/skills" target="_blank">GitHub 仓库</a> — 193k Stars</li>
+  <li><a href="../../reference/stitch-glossary.html">回到 Claude Code 进阶</a> — 复习 skills 基础</li>
+</ul>
+
+<p>有任何问题随时问我！</p>
+<script src="../../assets/nav.js"></script>
+</body>
+</html>

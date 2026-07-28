@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>yt-dlp L3: 原理 — yt-dlp 是怎么工作的</title>
+  <link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">yt-dlp · Lesson 3 / 4</div>
+  <h1 class="lesson-title">yt-dlp 原理</h1>
+  <p class="lesson-subtitle">一条下载命令背后发生了什么</p>
+</div>
+
+<blockquote>
+  前两课你学会了怎么用 yt-dlp。这课拆开来看<strong>它里面是怎么工作的</strong>——从 URL 输入到文件落盘，每一层在干什么。
+  理解原理后你就能预测它的行为、排查复杂问题、以及为 agent 编写指令时不靠猜。
+</blockquote>
+
+<h2 id="overview">下载一条视频的全链路</h2>
+<pre><code>你输入 yt-dlp "URL"
+  ↓
+① Extractor（提取器）——识别网站、抓取页面
+  ↓
+② Info Extraction（信息提取）——解析元数据
+  ↓
+③ Format Selection（格式选择）——按你的规则选最优
+  ↓
+④ Download（下载）——分片下载视频+音频
+  ↓
+⑤ Post-Processing（后处理）——合并、转码、嵌入字幕
+  ↓
+文件落盘</code></pre>
+
+<h2 id="extractor">Extractor（提取器）</h2>
+<p>每个支持的网站都有一个对应的 Extractor 类，负责"理解这个网站"。yt-dlp 有 <strong>1800+ 个 Extractor</strong>。</p>
+
+<pre><code>yt-dlp "https://www.youtube.com/watch?v=xxx"
+        ↓
+YouTube Extractor（提取器）
+  ├─ 1. 下载网页 HTML
+  ├─ 2. 提取页面中的初始数据（player response）
+  ├─ 3. 解析视频标题、时长、缩略图、字幕、格式列表
+  ├─ 4. 处理 JavaScript 加密参数（signature deciphering）
+  └─ 5. 返回结构化的 info dict</code></pre>
+
+<div class="info-box">
+  <strong>💡 为什么需要理解这个？</strong>
+  <p>下载失败时，90% 的问题出在 Extractor 阶段——网站改版了、Cookies 过期了、地理限制了。</p>
+  <p>知道 Extractor 的步骤，你就知道该去查哪一步。</p>
+</div>
+
+<p>查看 Extractor 输出（调试用）：</p>
+<pre><code>yt-dlp --print-json "URL"
+# 看到的是 Extractor 返回的原始 info dict</code></pre>
+
+<h2 id="info">Info Dict（信息字典）</h2>
+<p>Extractor 的输出是一个结构化字典，包含视频的所有元数据。后面的所有阶段都依赖它：</p>
+
+<pre><code>{
+  "id": "dQw4w9WgXcQ",
+  "title": "Rick Astley - Never Gonna Give You Up",
+  "duration": 212,
+  "uploader": "Rick Astley",
+  "formats": [
+    {
+      "format_id": "137",
+      "ext": "mp4",
+      "width": 1920,
+      "height": 1080,
+      "vcodec": "avc1.640028",
+      "acodec": "none",
+      "filesize": 52517535,
+      "tbr": 2200  // 总比特率 (kbps)
+    },
+    {
+      "format_id": "140",
+      "ext": "m4a",
+      "acodec": "mp4a.40.2",
+      "abr": 128,   // 音频比特率
+      "filesize": 3473182
+    }
+  ],
+  "subtitles": { "en": [...], "zh-Hans": [...] },
+  "thumbnails": [...]
+}</code></pre>
+
+<p>关键字段：</p>
+<table>
+  <tr><th>字段</th><th>说明</th></tr>
+  <tr><td><code>formats[]</code></td><td>所有可用的画质/格式列表</td></tr>
+  <tr><td><code>format_id</code></td><td>格式唯一标识符（-F 显示的那个编号）</td></tr>
+  <tr><td><code>height/width</code></td><td>视频分辨率</td></tr>
+  <tr><td><code>tbr</code></td><td>总比特率（越高画质越好）</td></tr>
+  <tr><td><code>vcodec/acodec</code></td><td>视频/音频编码格式</td></tr>
+  <tr><td><code>filesize</code></td><td>文件大小（字节）</td></tr>
+  <tr><td><code>abr</code></td><td>音频比特率</td></tr>
+</table>
+
+<h2 id="format-selection">格式选择算法</h2>
+<p><code>-f</code> 参数不是简单的"选最高的"，而是经过多层排序：</p>
+
+<h3>默认规则（不指定 -f）</h3>
+<pre><code># 等价于
+-f "bestvideo+bestaudio/best"
+# 逻辑：
+# 1. 尝试 bestvideo + bestaudio 分离下载 → ffmpeg 合并
+# 2. 如果无法分离（或没装 ffmpeg），退回到 best（单个文件）</code></pre>
+
+<h3>-S 排序参数</h3>
+<p><code>-S</code> 自定义格式的排序规则，决定了在多个匹配的格式中选哪个：</p>
+
+<pre><code># 默认排序
+-S "+size,+br"  # 文件大小从小到大，总比特率从小到大
+
+# 按分辨率降序，偏好 av1 编码
+-S "height:desc,codec:av01"
+
+# 按文件最小 + 编码优先 vp9
+-S "size:asc,codec:vp9"
+
+# 不要 av1 编码（兼容性优先）
+-f "bestvideo[height<=1080]+bestaudio/best" -S "codec:av01:murder"</code></pre>
+
+<table>
+  <tr><th>排序键</th><th>说明</th></tr>
+  <tr><td><code>height</code></td><td>分辨率</td></tr>
+  <tr><td><code>tbr/vbr/abr</code></td><td>总/视频/音频比特率</td></tr>
+  <tr><td><code>size</code></td><td>文件大小</td></tr>
+  <tr><td><code>codec</code></td><td>编码格式（h264/av1/vp9）</td></tr>
+  <tr><td><code>ext</code></td><td>容器格式（mp4/webm）</td></tr>
+  <tr><td><code>proto</code></td><td>传输协议（https/dash/m3u8）</td></tr>
+  <tr><td><code>br</code></td><td>比特率（综合）</td></tr>
+</table>
+
+<h2 id="download">下载与合并</h2>
+<p>选定格式后，yt-dlp 下载视频和音频流（可能来自同一个文件，也可能是分离的两个流），然后用 ffmpeg 合并：</p>
+
+<pre><code>情况 A：单一文件（如 720p mp4）
+  └─ 直接下载，保存
+
+情况 B：分离流（如最佳视频 [无音频] + 最佳音频）
+  ├─ 下载 video.mp4（仅画面）
+  ├─ 下载 audio.m4a（仅声音）
+  └─ ffmpeg -i video.mp4 -i audio.m4a -c copy output.mp4
+      （ffmpeg 把它们封装进同一个容器）
+
+情况 C：DASH 分片流
+  └─ 每个视频和音频被切成 N 个小片
+  ├─ 并行下载所有分片
+  └─ 合并分片 → 合并音视频</code></pre>
+
+<h2 id="post">后处理管线</h2>
+<p>下载完成后，yt-dlp 按顺序执行后处理器：</p>
+
+<pre><code>下载完成 → 后处理器链（可自由组合）：
+
+  Step 1: 嵌入缩略图（--embed-thumbnail）
+  Step 2: 嵌入字幕（--embed-subs）
+  Step 3: 嵌入元数据（--embed-metadata）
+  Step 4: 转码/提取音频（-x --audio-format mp3）
+  Step 5: 重命名（-o 模板）
+
+每个步骤都可选，按你在命令行指定的顺序执行。</code></pre>
+
+<h2 id="config-chain">配置优先级</h2>
+<p>理解配置加载顺序，才能写不出 bug 的自动化脚本：</p>
+
+<pre><code>优先级从高到低：
+  1. 命令行参数           — 最高，覆盖一切
+  2. 本地配置文件         — 当前目录的 yt-dlp.conf
+  3. 用户配置文件         — ~/.yt-dlp/config（或 %APPDATA%/yt-dlp/config.txt）
+  4. 系统配置文件         — /etc/yt-dlp.conf
+  5. 内置默认值           — 最低</code></pre>
+
+<p>后面层级的同名参数被前面层级覆盖。多条不同参数则合并。</p>
+
+<h2 id="key">原理对 agent 的意义</h2>
+<p>理解了这些，你就能给 agent 写清晰的指令而不用碰运气：</p>
+
+<table>
+  <tr><th>场景</th><th>agent 需要知道的原理</th></tr>
+  <tr><td>"下载最好的视频"</td><td>格式选择算法 → 知道用 <code>-f bestvideo+bestaudio/best</code></td></tr>
+  <tr><td>"出错时重试"</td><td>Extractor 流程 → 知道先加 cookies</td></tr>
+  <tr><td>"下载后自动转 MP3"</td><td>后处理管线 → 知道用 <code>-x --audio-format mp3</code></td></tr>
+  <tr><td>"批量处理"</td><td>info dict → 知道怎么解析输出来编排工作流</td></tr>
+</table>
+
+<h2>课后推荐阅读</h2>
+<ul>
+  <li><a href="https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/extractor/common.py" target="_blank">Extractor 基类源码</a> — 提取器接口定义</li>
+  <li><a href="https://github.com/yt-dlp/yt-dlp?tab=readme-ov-file#readme" target="_blank">官方 README</a> — -S 排序规则完整文档</li>
+  <li><a href="0001-ytdlp-basics.html">回顾 L1: 基础</a></li>
+  <li><a href="0002-ytdlp-advanced.html">回顾 L2: 进阶</a></li>
+</ul>
+
+<p>下一课讲<strong>集成与自动化</strong>——封装为 Skill、Python API、自动流程。</p>
+<script src="../../assets/nav.js"></script>
+</body>
+</html>

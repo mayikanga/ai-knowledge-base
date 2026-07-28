@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Strix L2: 高级扫描 — 多目标、认证测试、CI/CD</title>
+  <link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">Strix · Lesson 2 / 3</div>
+  <h1 class="lesson-title">高级扫描</h1>
+  <p class="lesson-subtitle">多目标、认证测试、CI/CD 集成</p>
+</div>
+
+<blockquote>
+  L1 你学会了基本扫描。这课深入<strong>高级场景</strong>——带认证的灰盒测试、多目标并行扫描、PR 自动安全检测、差异扫描减少噪音。
+</blockquote>
+
+<h2 id="auth">认证测试（灰盒）</h2>
+<p>需要登录的应用，用 <code>--instruction</code> 传入凭据：</p>
+<pre><code>strix --target https://your-app.com \
+  --instruction "使用账号 admin:password123 进行认证测试"</code></pre>
+<p>Strix 会用这些凭据登录，然后以已认证用户身份测试越权、IDOR、权限提升等。</p>
+
+<h2 id="multi">多目标并行扫描</h2>
+<p>同时扫描源码和已部署的应用：</p>
+<pre><code>strix -t https://github.com/org/app -t https://your-app.com</code></pre>
+<p>也可以从文件读取目标列表：</p>
+<pre><code>strix --target-list ./targets.txt</code></pre>
+
+<h2 id="diff">差异扫描（PR 友好）</h2>
+<p>只扫描变更的部分，适合 Pull Request：</p>
+<pre><code>strix -n --target ./ --scan-mode quick --scope-mode diff --diff-base origin/main</code></pre>
+<p>只分析变更的代码行，大幅减少扫描时间和 API 消耗。</p>
+
+<h2 id="custom">自定义指令</h2>
+<p>聚焦特定漏洞类型：</p>
+<pre><code># 只关注业务逻辑漏洞和 IDOR
+strix --target api.your-app.com \
+  --instruction "聚焦业务逻辑漏洞和 IDOR"
+
+# 从文件读取指令
+strix --target api.your-app.com \
+  --instruction-file ./pentest-instructions.md</code></pre>
+
+<h2 id="headless">静默模式（CI 用）</h2>
+<pre><code>strix -n --target https://your-app.com</code></pre>
+<p><code>-n</code> / <code>--non-interactive</code>：无交互 UI，实时打印发现，有漏洞时退出码非 0，适合自动化流程。</p>
+
+<h2 id="cicd">GitHub Actions 集成</h2>
+<pre><code># .github/workflows/strix-scan.yml
+name: strix-penetration-test
+on: pull_request
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Install Strix
+        run: curl -sSL https://strix.ai/install | bash
+      - name: Run Strix
+        env:
+          STRIX_LLM: ${{ secrets.STRIX_LLM }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: strix -n -t ./ --scan-mode quick</code></pre>
+
+<div class="banner banner-success">
+  <strong>💡 工作流</strong>
+  <p>开发者提 PR → GitHub Actions 触发 Strix → 自动扫描变更代码 → 发现漏洞 → PR 上标注 → 阻塞合并直到修复。</p>
+</div>
+
+<h2 id="sarif">SARIF 集成</h2>
+<p>v1.0.0 起支持 SARIF 2.1.0 格式，可以集成到 GitHub Code Scanning 和 VS Code：</p>
+<pre><code>strix -n -t ./ --sarif-output results.sarif</code></pre>
+<p>之后上传到 GitHub：</p>
+<pre><code>gh api /repos/org/repo/code-scanning/sarifs \
+  -f sarif=@results.sarif \
+  -f commit_sha=${{ github.sha }}</code></pre>
+
+<h2 id="practice">动手练习</h2>
+<div class="exercise">
+  <h3>🎯 配置 PR 自动安全扫描</h3>
+  <ol class="steps">
+    <li><strong>创建 GitHub Actions 配置</strong><p>按上面的模板在你的项目中创建 <code>.github/workflows/strix-scan.yml</code>。</p></li>
+    <li><strong>提交一个 PR</strong><p>故意在代码中添加一个简单的漏洞（如未授权接口），提 PR 观察 Strix 是否检测到。</p></li>
+    <li><strong>查看报告</strong><p>观察 Strix 生成的 PoC 和修复建议。</p></li>
+  </ol>
+</div>
+
+<h2>关键要点</h2>
+<div class="banner banner-success">
+  <ul>
+    <li><code>--instruction</code> 传入认证凭据做灰盒测试</li>
+    <li><code>-t</code> 可同时指定多个目标（源码 + 线上）</li>
+    <li>差异扫描 <code>--scope-mode diff</code> 只扫变更行，适合 PR</li>
+    <li>GitHub Actions 集成实现 PR 自动安全检测</li>
+    <li>SARIF 输出可接入 GitHub Code Scanning</li>
+  </ul>
+</div>
+
+<h2>课后推荐阅读</h2>
+<ul>
+  <li><a href="https://github.com/usestrix/strix" target="_blank">GitHub 仓库</a> — GitHub Actions 配置示例</li>
+  <li><a href="https://strix.ai" target="_blank">Strix 官网</a> — CI/CD 集成文档</li>
+</ul>
+
+<p>最后一课讲<strong>架构与原理</strong>——多 agent 编排、漏洞验证、自动修复。</p>
+<script src="../../assets/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stitch L2: 提示词工程 — 从"能看"到"精准"</title>
+  <link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+
+<aside class="course-nav" aria-label="课程目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">Stitch · Lesson 2 / 6</div>
+  <h1 class="lesson-title">提示词工程</h1>
+  <p class="lesson-subtitle">从"能看"到"精准"</p>
+</div>
+
+<blockquote>
+  L1 你体验了 Stitch 的基本流程——写一段提示词 → 生成一个屏幕。但 L1 的提示词只是"开箱即用"的水平。
+  这一课教你写出让 Stitch <strong>一次就生成你想要的效果</strong>的结构化提示词，<strong>减少反复修改的轮次</strong>。
+</blockquote>
+
+<h2 id="prompt-why">为什么提示词质量如此重要？</h2>
+
+<p>
+  Stitch 生成的 UI 质量，90% 取决于提示词质量。和 Claude Code 不同——Claude Code 可以和你多轮对话来理解意图，
+  Stitch 的生成是一次性的（虽然可以迭代精调），但<strong>第一次生成的质量决定了后续迭代的起点</strong>。
+</p>
+
+<div class="info-box">
+  <strong>💡 核心原则</strong>
+  <p>好的 Stitch 提示词 = 告诉 AI <strong>"有什么" + "长什么样" + "不要什么"</strong></p>
+  <p>模糊的提示词 = 通用的、模板化的、和其他人没区别的设计</p>
+</div>
+
+<h2 id="prompt-eight">提示词 8 要素</h2>
+
+<p>一个结构化的 Stitch 提示词包含 8 个要素。不需要每次都全写，但知道有哪些维度可以调整：</p>
+
+<table>
+  <tr>
+    <th>#</th>
+    <th>要素</th>
+    <th>说明</th>
+    <th>示例</th>
+  </tr>
+  <tr>
+    <td>1</td>
+    <td><strong>产品名称与定位</strong></td>
+    <td>告诉 AI 你在设计什么、什么调性</td>
+    <td>TaskFlow —— 一个项目管理工具</td>
+  </tr>
+  <tr>
+    <td>2</td>
+    <td><strong>目标用户</strong></td>
+    <td>谁用这个界面？影响设计风格</td>
+    <td>面向中小团队的项目经理</td>
+  </tr>
+  <tr>
+    <td>3</td>
+    <td><strong>配色方案</strong></td>
+    <td>主色、辅色，最好给 hex 值</td>
+    <td>蓝色主色调 (#4361ee)，灰色背景 (#f5f7fa)</td>
+  </tr>
+  <tr>
+    <td>4</td>
+    <td><strong>页面结构</strong></td>
+    <td>从上到下描述每个区域</td>
+    <td>顶部：Logo + 导航 → 中间：功能列表 → 底部：页脚</td>
+  </tr>
+  <tr>
+    <td>5</td>
+    <td><strong>信息层次</strong></td>
+    <td>什么最重要、什么其次</td>
+    <td>CTA 按钮最大最醒目，次要链接用小字</td>
+  </tr>
+  <tr>
+    <td>6</td>
+    <td><strong>内容/数据</strong></td>
+    <td>要展示的文本或数据示例</td>
+    <td>定价方案：免费版 $0、专业版 $29、企业版 $99</td>
+  </tr>
+  <tr>
+    <td>7</td>
+    <td><strong>设计关键词</strong></td>
+    <td>风格描述</td>
+    <td>简洁、现代、圆角、毛玻璃效果</td>
+  </tr>
+  <tr>
+    <td>8</td>
+    <td><strong>反模式（要避免的）</strong></td>
+    <td>明确告诉 AI 不要做什么</td>
+    <td>避免：紫色渐变、3D 插画、emoji 图标、抽象球体</td>
+  </tr>
+</table>
+
+<div class="banner banner-success">
+  <strong>💡 要素 8（反模式）</strong>是最容易被忽略但效果最显著的一个。Stitch 默认倾向于生成"AI 感"重的设计——紫色渐变、对称列、抽象 3D 球体。明确告诉它不要这些，输出质量会立刻上一个档次。
+</div>
+
+<h2 id="prompt-example">对比：差 vs 好</h2>
+
+<p>同样的需求，两个提示词的输出天差地别：</p>
+
+<h3>❌ 差提示词</h3>
+<pre><code>一个定价页面</code></pre>
+<p>→ 结果：通用模板，和其他人用 Stitch 生成的几乎一样，缺乏品牌感。</p>
+
+<h3>✅ 好提示词</h3>
+<pre><code>为 TaskFlow（项目管理工具）设计一个定价页面，面向中小团队。
+
+- 主色：蓝色 (#4361ee)，背景：浅灰 (#f5f7fa)
+- 顶部：标题"选择适合你的方案" + 年付/月付切换开关
+- 中间：三种定价卡片并列——免费版 $0、专业版 $29、企业版 $99
+  - 每个卡片含：方案名、价格、功能列表（3-5 项）、"开始使用"按钮
+  - 专业版卡片突出放大（推荐标签）
+- 底部：FAQ 折叠区
+
+风格：简洁、大量留白、圆角卡片（12px）
+避免：紫色渐变、对称三列布局、emoji 图标、抽象 3D 球体、模糊背景</code></pre>
+
+<h2 id="prompt-vibe">Vibe Design vs 组件式提示词</h2>
+
+<p>Stitch 支持两种提示词风格，它们不是二选一，而是<strong>先后使用</strong>：</p>
+
+<table>
+  <tr>
+    <th></th>
+    <th>Vibe Design（氛围驱动）</th>
+    <th>组件式（结构驱动）</th>
+  </tr>
+  <tr>
+    <td><strong>怎么说</strong></td>
+    <td>描述感觉、氛围、目标</td>
+    <td>描述组件、布局、结构</td>
+  </tr>
+  <tr>
+    <td><strong>何时用</strong></td>
+    <td>第一步——找方向、探索风格</td>
+    <td>第二步——定下来后精调细节</td>
+  </tr>
+  <tr>
+    <td><strong>示例</strong></td>
+    <td>"一个冥想 app，感觉像周日上午在木屋里，温暖、安静、自然光"</td>
+    <td>"顶部 app 名称 + 三个 tab（专注/放松/睡眠），中间大计时器，底部开始按钮"</td>
+  </tr>
+  <tr>
+    <td><strong>输出特点</strong></td>
+    <td>有惊喜感，可能超出预期</td>
+    <td>精准可控，符合预期</td>
+  </tr>
+  <tr>
+    <td><strong>风险</strong></td>
+    <td>太抽象时 AI 自由发挥过度</td>
+    <td>缺少创意，略显模板化</td>
+  </tr>
+</table>
+
+<div class="info-box">
+  <strong>💡 最佳实践：Vibe → 结构 → 细调</strong>
+  <ol>
+    <li>先用 Vibe Design 让 AI 给你几个方向（快速探索）</li>
+    <li>选定方向后用组件式提示词生成精确页面</li>
+    <li>最后用对话或语音局部微调</li>
+  </ol>
+</div>
+
+<h2 id="prompt-refine">迭代精调策略</h2>
+
+<p>第一次生成了"还不错但不完全对"的设计后，不要从头重写提示词。用这些策略逐步逼近：</p>
+
+<table>
+  <tr>
+    <th>策略</th>
+    <th>怎么说</th>
+    <th>适用场景</th>
+  </tr>
+  <tr>
+    <td><strong>全局修改</strong></td>
+    <td>"整体风格改成深色模式"</td>
+    <td>配色、风格大变</td>
+  </tr>
+  <tr>
+    <td><strong>局部修改</strong></td>
+    <td>"把第三张卡片改成白色背景，加阴影"</td>
+    <td>某个元素不对</td>
+  </tr>
+  <tr>
+    <td><strong>增删内容</strong></td>
+    <td>"在底部加一个 FAQ 区域"</td>
+    <td>结构缺失</td>
+  </tr>
+  <tr>
+    <td><strong>重新排序</strong></td>
+    <td>"把功能列表放到 CTA 按钮上面"</td>
+    <td>信息层次不对</td>
+  </tr>
+  <tr>
+    <td><strong>风格微调</strong></td>
+    <td>"圆角再大一点，按钮加 hover 效果"</td>
+    <td>细节完善</td>
+  </tr>
+</table>
+
+<div class="banner banner-warning">
+  <strong>⚠️ 注意：</strong>每次修改都会消耗一次生成配额（Standard/Experimental 都算）。
+  所以 L1 的策略——先用 Standard 快速迭代，最后用 Experimental 出最终稿——不只是为了省配额，也是因为 <strong>Standard 模式的迭代速度快，适合"试错"</strong>。
+</div>
+
+<h2 id="prompt-voice">语音控制（预览功能）</h2>
+
+<p>Stitch 在 2026 年加入了语音控制功能（预览阶段），可以直接说话修改设计：</p>
+
+<pre><code>"整体换一个更暗的配色"
+"把标题加大"
+"加一个用户评价区域"</code></pre>
+
+<p>语音适合快速操作类修改，复杂结构变化还是打字更精确。两者互补。</p>
+
+<h2 id="prompt-anti">常见反模式清单</h2>
+
+<p>这些是 Stitch 默认倾向生成的"AI 感"元素，建议在提示词的"避免"部分明确列出的：</p>
+
+<table>
+  <tr>
+    <th>反模式</th>
+    <th>说"避免"怎么说</th>
+  </tr>
+  <tr>
+    <td>紫色渐变背景</td>
+    <td>避免紫色渐变、蓝色到紫色渐变</td>
+  </tr>
+  <tr>
+    <td>对称三列布局</td>
+    <td>避免完全对称的三列布局</td>
+  </tr>
+  <tr>
+    <td>抽象 3D 球体/几何图形</td>
+    <td>避免 3D 球体、抽象几何装饰</td>
+  </tr>
+  <tr>
+    <td>无意义的表情符号图标</td>
+    <td>避免 emoji 作为图标</td>
+  </tr>
+  <tr>
+    <td>通用的库存照片</td>
+    <td>避免通用的库存摄影照片</td>
+  </tr>
+  <tr>
+    <td>模糊的半透明背景层</td>
+    <td>避免过于复杂的背景纹理</td>
+  </tr>
+  <tr>
+    <td>"科技感"字体</td>
+    <td>避免过于装饰性的字体</td>
+  </tr>
+</table>
+
+<h2 id="prompt-practice">动手练习</h2>
+
+<div class="exercise">
+  <h3>🎯 练习：从差到好，三次蜕变</h3>
+
+  <p><strong>场景：</strong>为一个在线课程平台设计首页 Hero 区域。</p>
+
+  <p><strong>步骤：</strong></p>
+
+  <ol class="steps">
+    <li>
+      <strong>第一版：只给一句</strong>
+      <p>试试这个：</p>
+      <pre><code>一个在线课程平台的首页</code></pre>
+      <p>观察输出——是不是很模板化？</p>
+    </li>
+    <li>
+      <strong>第二版：加结构 + 风格</strong>
+      <p>试试这个：</p>
+<pre><code>一个在线课程平台的首页。目标用户是职场人士。
+
+- 主色：#6C63FF（紫色），辅色：#FF6584（粉色强调）
+- Hero 区域：左侧标题 + 描述 + 搜索框，右侧大图
+- 紧接：3 张热门课程卡片（横向排列）
+- 然后：一个"为什么选择我们"区域，3 个图标+说明
+- 底部：页脚 + 社交媒体链接
+
+风格：现代、圆润、友好
+避免：紫色渐变背景</code></pre>
+      <p>和第一版对比——结构清楚了，但可能还缺少个性。</p>
+    </li>
+    <li>
+      <strong>第三版：加 Vibe + 反模式</strong>
+      <p>在第二版基础上追加精调指令：</p>
+      <pre><code>整体感觉更温暖、更有教育感，像可汗学院或 Coursera 那种"知识让人成长"的氛围。
+把搜索框改成带热门标签的样式（如"Python"、"设计"、"数据分析"）。
+避免：3D 球体、对称布局、emoji、库存照片。</code></pre>
+      <p>三版对比，看看提示词从 5 个字到 50 个字到 100 个字的质量跃升。</p>
+    </li>
+  </ol>
+</div>
+
+<h2 id="prompt-tips">经验总结</h2>
+
+<div class="banner banner-success">
+  <strong>💡 提示词工程核心要点</strong>
+  <ul>
+    <li><strong>8 要素不是 checklist</strong>——不需要每次都写全，但遇到不满意时逐项检查</li>
+    <li><strong>反模式效果显著</strong>——明确告诉 AI "不要什么" 比 "要什么" 更能提升质量</li>
+    <li><strong>Vibe → 结构 → 细调</strong>——三阶段递进，不是一次写完</li>
+    <li><strong>先 Standard 快速试错</strong>——消耗配额少、速度快，确定方向后再用 Experimental</li>
+    <li><strong>中文提示词完全可行</strong>——颜色 hex 值用英文，风格描述用中文，混写没问题</li>
+  </ul>
+</div>
+
+<h2>课后推荐阅读</h2>
+
+<ul>
+  <li><a href="0001-stitch-basics.html">回顾 L1：Stitch 基础</a></li>
+  <li><a href="https://stitch.withgoogle.com" target="_blank">Stitch 官网</a> — 亲自试试不同提示词的效果</li>
+  <li><a href="https://www.guvi.in/blog/google-stitch-ai/" target="_blank">GUVI: Google Stitch AI Beginner's Guide</a> — 含提示词最佳实践</li>
+  <li><a href="../../reference/stitch-glossary.html">Stitch 术语速查表</a></li>
+</ul>
+
+<h2>📌 别忘了</h2>
+<p>提示词工程是 Stitch 使用中最值得花时间打磨的技能。好的提示词 = 一次生成 + 轻微调整 = 最终稿；差的提示词 = 反复重来 = 配额用完。</p>
+<p>下一课讲 <strong>DESIGN.md</strong>——怎么把你的设计风格固化为可复用的"设计系统即代码"。</p>
+
+<script src="../../assets/nav.js"></script>
+</body>
+</html>

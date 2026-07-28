@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lesson 1: Hooks 入门 — 你的第一个自动化钩子</title>
+  <link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">Lesson 1 / 6</div>
+  <h1 class="lesson-title">Hooks 入门</h1>
+  <p class="lesson-subtitle">你的第一个自动化钩子</p>
+</div>
+
+<blockquote>
+  Mission 关联：作为一个进阶用户，你已经习惯了"手动发指令"的工作模式。Hooks 是你迈向"自动化"的第一步——让 Claude Code 在特定事件发生时自动执行你定义的操作，不再需要每次手动提醒。
+</blockquote>
+
+<h2 id="hooks-intro">什么是 Hooks？</h2>
+
+<p>
+  Hooks 是 Claude Code 的<strong>生命周期事件触发器</strong>。它们让你在特定事件发生时自动执行脚本、HTTP 请求、或者注入提示词。
+  你可以把它们想象成"编程中的事件监听器"——当某件事发生时，自动触发一个函数。
+</p>
+
+<p>与 <code>CLAUDE.md</code> 中的文字说明不同（那是<em>建议性的</em>，Claude 可能不遵循），Hook 是<strong>强制性的</strong>——每次事件匹配都会执行，没有商量的余地。</p>
+
+<div class="info-box">
+  <strong>💡 核心概念</strong>
+  Hook = 事件 + 匹配规则 + 动作。
+  当<strong>事件</strong>发生时，如果满足<strong>匹配规则</strong>，就执行<strong>动作</strong>。
+</div>
+
+<h2 id="hooks-elements">Hook 的三种核心元素</h2>
+
+<p>一个 Hook 配置由三层组成：</p>
+
+<table>
+  <tr>
+    <th>层级</th>
+    <th>说明</th>
+    <th>示例</th>
+  </tr>
+  <tr>
+    <td><strong>事件 (Event)</strong></td>
+    <td>触发的时机</td>
+    <td><code>PreToolUse</code>（使用工具前）<br><code>PostToolUse</code>（使用工具后）</td>
+  </tr>
+  <tr>
+    <td><strong>匹配器 (Matcher)</strong></td>
+    <td>过滤条件</td>
+    <td><code>"Edit|Write"</code>（仅在编辑文件时）</td>
+  </tr>
+  <tr>
+    <td><strong>动作 (Action)</strong></td>
+    <td>执行的命令</td>
+    <td><code>shell 命令</code>、<code>HTTP 请求</code>、<code>prompt</code></td>
+  </tr>
+</table>
+
+<h2 id="hooks-types">五种 Hook 类型</h2>
+
+<table>
+  <tr>
+    <th>类型</th>
+    <th>用途</th>
+    <th>推荐场景</th>
+  </tr>
+  <tr>
+    <td><code>command</code></td>
+    <td>执行 shell 命令</td>
+    <td>运行 linter、发送通知、文件检查</td>
+  </tr>
+  <tr>
+    <td><code>http</code></td>
+    <td>发送 HTTP POST</td>
+    <td>通知外部系统、触发 CI</td>
+  </tr>
+  <tr>
+    <td><code>prompt</code></td>
+    <td>注入提示词给 Claude</td>
+    <td>在特定事件前注入额外指令</td>
+  </tr>
+  <tr>
+    <td><code>agent</code></td>
+    <td>启动子 agent</td>
+    <td>复杂验证、多步骤检查</td>
+  </tr>
+  <tr>
+    <td><code>mcp_tool</code></td>
+    <td>调用 MCP 工具</td>
+    <td>从 MCP 服务获取数据做检查</td>
+  </tr>
+</table>
+
+<h2 id="hooks-config">配置结构</h2>
+
+<p>Hooks 写在 <code>settings.json</code> 中。你可以在以下位置配置：</p>
+
+<table>
+  <tr>
+    <th>位置</th>
+    <th>作用域</th>
+    <th>特点</th>
+  </tr>
+  <tr>
+    <td><code>~/.claude/settings.json</code></td>
+    <td>全局（所有项目）</td>
+    <td>个人配置，不共享</td>
+  </tr>
+  <tr>
+    <td><code>.claude/settings.json</code></td>
+    <td>项目级别</td>
+    <td>可提交到仓库，团队共享</td>
+  </tr>
+  <tr>
+    <td><code>.claude/settings.local.json</code></td>
+    <td>项目级别</td>
+    <td>被 gitignore，个人覆盖</td>
+  </tr>
+</table>
+
+<p>基本格式如下：</p>
+
+<pre><code>{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/lint-check.mjs",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}</code></pre>
+
+<h2 id="hooks-exit">退出代码的意义</h2>
+
+<p>对于 <code>command</code> 类型的 hook，退出代码决定了行为：</p>
+
+<table>
+  <tr>
+    <th>退出码</th>
+    <th>含义</th>
+    <th>行为</th>
+  </tr>
+  <tr>
+    <td><code>0</code></td>
+    <td>成功</td>
+    <td>继续执行 —— 通过</td>
+  </tr>
+  <tr>
+    <td><code>1</code></td>
+    <td>非阻塞错误</td>
+    <td>Claude 看到报错但继续执行</td>
+  </tr>
+  <tr>
+    <td><code>2</code></td>
+    <td>阻塞/拒绝</td>
+    <td><strong>阻止操作</strong>，stderr 反馈给 Claude</td>
+  </tr>
+</table>
+
+<div class="banner banner-warning">
+  <strong>⚠️ 关键点：</strong>退出码 2 是"阻断"信号。如果你想在特定条件下阻止 Claude 做某件事（比如删除文件、强制推送），hook 返回 2 就能拦住。
+</div>
+
+<h2 id="hooks-events">常见 Hook 事件速查</h2>
+
+<table>
+  <tr>
+    <th>事件名</th>
+    <th>触发时机</th>
+    <th>匹配对象</th>
+  </tr>
+  <tr>
+    <td><code>PreToolUse</code></td>
+    <td>使用工具之前</td>
+    <td>工具名 (Bash, Edit, Write...) </td>
+  </tr>
+  <tr>
+    <td><code>PostToolUse</code></td>
+    <td>工具执行完后</td>
+    <td>工具名</td>
+  </tr>
+  <tr>
+    <td><code>Notification</code></td>
+    <td>Claude 需要输入</td>
+    <td>通知类型</td>
+  </tr>
+  <tr>
+    <td><code>UserPromptSubmit</code></td>
+    <td>你提交提示词</td>
+    <td>始终触发</td>
+  </tr>
+  <tr>
+    <td><code>SessionStart</code></td>
+    <td>会话开始</td>
+    <td>启动方式</td>
+  </tr>
+  <tr>
+    <td><code>Stop</code></td>
+    <td>Claude 停止响应</td>
+    <td>始终触发</td>
+  </tr>
+  <tr>
+    <td><code>PostToolUseFailure</code></td>
+    <td>工具失败后</td>
+    <td>工具名</td>
+  </tr>
+</table>
+
+<h2 id="hooks-practice">动手练习：创建你的第一个 Hook</h2>
+
+<div class="exercise">
+  <h3>🎯 练习：写一个"文件编辑后自动格式化"的 Hook</h3>
+
+  <p><strong>场景：</strong>每次 Claude 用 <code>Edit</code> 或 <code>Write</code> 工具修改了文件后，自动运行 Prettier 格式化。</p>
+
+  <p><strong>步骤：</strong></p>
+
+  <ol class="steps">
+    <li>
+      <strong>找到 settings 文件位置</strong>
+      <p>在你的项目根目录（或全局 <code>~/.claude/</code>）找到 <code>settings.json</code>。如果不存在，创建一个 <code>.claude/settings.json</code>。</p>
+    </li>
+    <li>
+      <strong>写入 Hook 配置</strong>
+<pre><code>{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '文件已编辑，可以在这里运行格式化命令'",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}</code></pre>
+    </li>
+    <li>
+      <strong>换成真实的格式化命令</strong>
+      <p>把 <code>command</code> 换成项目中实际用的格式化工具，比如：</p>
+<pre><code>"command": "jq -r '.tool_input.file_path' | xargs npx prettier --write"</code></pre>
+      <p><em>注：<code>jq '.tool_input.file_path'</code> 是从 hook 接收的 stdin JSON 中提取被编辑的文件路径。</em></p>
+    </li>
+    <li>
+      <strong>测试！</strong>
+      <p>在同一个项目中启动 Claude Code，让它帮你编辑一个文件。观察终端输出，看看你的 hook 是否被触发。</p>
+    </li>
+  </ol>
+</div>
+
+<h2 id="hooks-advance">更进一步：做个"破坏性操作守卫"</h2>
+
+<p>这可能是最有用的 hook 之一 —— 在 <code>PreToolUse</code> 阶段拦截危险的 <code>Bash</code> 命令：</p>
+
+<pre><code>{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"
+  const input = require('fs').readFileSync('/dev/stdin','utf8');
+  const cmd = JSON.parse(input).tool_input?.command || '';
+  const blocked = ['rm -rf', 'git push --force', 'DROP TABLE'];
+  if (blocked.some(b => cmd.includes(b))) {
+    console.error('🚫 检测到高危命令已阻止:', cmd);
+    process.exit(2);
+  }
+\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}</code></pre>
+
+<p>这个 hook 会在每次 <code>Bash</code> 工具执行前检查命令内容，如果包含 <code>rm -rf</code>、<code>git push --force</code> 等危险操作，就返回退出码 2 阻止执行。</p>
+
+<div class="banner banner-success">
+  <strong>💡 学到了什么？</strong>
+  <ul>
+    <li>Hook 的"事件-匹配-动作"三层结构</li>
+    <li>五种 hook 类型及适用场景</li>
+    <li>退出码 0/1/2 的区别（0=通过, 1=警告, 2=阻止）</li>
+    <li>常见的 hook 事件：PreToolUse、PostToolUse 等</li>
+    <li>如何配置 settings.json 中的 hooks 段落</li>
+  </ul>
+</div>
+
+<h2 id="hooks-reading">课后推荐阅读</h2>
+
+<ul>
+  <li><a href="https://code.claude.com/docs/en/hooks-guide" target="_blank">官方 Hooks Guide</a> — 最佳入门读物</li>
+  <li><a href="https://code.claude.com/docs/en/hooks" target="_blank">Hooks Reference</a> — 完整事件列表和配置模式</li>
+  <li><a href="https://code.claude.com/docs/en/configuration" target="_blank">Settings & Configuration</a> — settings.json 完整参考</li>
+</ul>
+
+<h2>📌 别忘了</h2>
+<p>
+  有任何不清楚的地方，随时问我！Hook 的 matcher 语法、事件选择、或者调试技巧，都可以继续深聊。
+</p>
+
+<script>
+  (() => { const button = document.querySelector('.course-nav__toggle'); button.addEventListener('click', () => { const collapsed = document.body.classList.toggle('nav-collapsed'); button.setAttribute('aria-expanded', String(!collapsed)); button.setAttribute('aria-label', collapsed ? '展开目录' : '收起目录'); }); })();
+</script>
+<script src="../assets/nav.js"></script>
+</body>
+</html>

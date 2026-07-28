@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stitch L6: 实战 — Design-to-Code 流水线</title>
+  <link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">Stitch · Lesson 6 / 6</div>
+  <h1 class="lesson-title">实战：Design-to-Code 流水线</h1>
+  <p class="lesson-subtitle">从想法到代码的完整闭环</p>
+</div>
+
+<blockquote>
+  这是 Stitch 课程的最后一课。你把 L1-L5 的全部知识——提示词工程、DESIGN.md、SDK、MCP 集成——
+  <strong>串成一条完整的 Design-to-Code 流水线</strong>，从一个想法出发，最终得到可运行的代码。
+</blockquote>
+
+<h2 id="project-overview">项目概览</h2>
+
+<p>你将搭建一条完整的流水线：</p>
+
+<pre><code>想法描述
+  ↓
+① Stitch 网页 / SDK 生成设计（L1、L4）
+② 用 DESIGN.md 控制设计风格（L3）
+③ 通过提示词工程精调细节（L2）
+④ Stitch MCP + Claude Code 导出代码（L5）
+⑤ Claude Code 重构为生产级组件（CC 进阶）
+  ↓
+可运行的代码</code></pre>
+
+<div class="info-box">
+  <strong>🎯 目标</strong>
+  <p>完成流水线后，你拿到的是<strong>可直接集成到项目中的代码</strong>，而不是需要大量返工的"脚手架"。</p>
+  <p>关键：Stitch 负责"设计生成"，Claude Code 负责"代码精化"——各司其职。</p>
+</div>
+
+<h2 id="project-flow">完整工作流</h2>
+
+<h3>第一阶段：设计（Stitch）</h3>
+
+<table>
+  <tr>
+    <th>步骤</th>
+    <th>工具</th>
+    <th>产出</th>
+  </tr>
+  <tr>
+    <td>1. 准备 DESIGN.md</td>
+    <td>Stitch 网页 / extract-design-md</td>
+    <td>设计系统文件</td>
+  </tr>
+  <tr>
+    <td>2. 生成初始设计</td>
+    <td>Stitch 网页 / SDK generate()</td>
+    <td>高保真屏幕</td>
+  </tr>
+  <tr>
+    <td>3. 迭代精调</td>
+    <td>Stitch 语音 / edit() / variants()</td>
+    <td>最终设计稿</td>
+  </tr>
+  <tr>
+    <td>4. 导出</td>
+    <td>Stitch 导出 / SDK getHtml()</td>
+    <td>HTML/CSS 或 React 代码</td>
+  </tr>
+</table>
+
+<h3>第二阶段：代码（Claude Code）</h3>
+
+<table>
+  <tr>
+    <th>步骤</th>
+    <th>方法</th>
+    <th>产出</th>
+  </tr>
+  <tr>
+    <td>5. 代码审查</td>
+    <td>Claude Code 审查导出的代码</td>
+    <td>问题清单</td>
+  </tr>
+  <tr>
+    <td>6. 重构</td>
+    <td>Claude Code 拆分组件、加类型、补样式</td>
+    <td>生产级组件</td>
+  </tr>
+  <tr>
+    <td>7. 集成</td>
+    <td>Claude Code 接入路由、状态管理、API</td>
+    <td>可运行的页面</td>
+  </tr>
+</table>
+
+<h2 id="project-prompt">完整的提示词模板</h2>
+
+<p>以下是一个端到端的提示词模板，你可以直接用在 Claude Code 中：</p>
+
+<pre><code>帮我完成一个 Design-to-Code 流水线：
+
+## 项目
+一个叫 TaskFlow 的项目管理工具
+
+## 设计需求
+生成一个任务看板页面，包含：
+- 顶部：项目名称 + 筛选器 + "新建任务"按钮
+- 主体：三列看板（待办 / 进行中 / 已完成）
+- 每个任务卡片含：标题、负责人、优先级标签、截止日期
+- 拖拽交互的视觉暗示
+
+## 设计风格
+参考我项目中的 DESIGN.md（如果存在），如果没有：
+- 蓝色主色调 #4361ee
+- 圆角卡片 8px
+- 简洁现代，大量留白
+- 避免：紫色渐变、3D 插画、emoji
+
+## 流程
+1. 先用 Stitch 生成设计
+2. 导出 HTML
+3. 帮我审查导出的代码，找出需要改进的地方
+4. 重构为 React + TypeScript 组件
+5. 拆分组件结构，加上合理的 Props 类型</code></pre>
+
+<h2 id="project-checklist">质量检查清单</h2>
+
+<p>导出 Stitch 生成的代码后，让 Claude Code 逐项检查：</p>
+
+<table>
+  <tr>
+    <th>维度</th>
+    <th>检查项</th>
+  </tr>
+  <tr>
+    <td><strong>结构</strong></td>
+    <td>组件是否拆分合理？有没有过于冗长的文件？</td>
+  </tr>
+  <tr>
+    <td><strong>类型</strong></td>
+    <td>Props 是否有 TypeScript 类型？缺少的类型补上</td>
+  </tr>
+  <tr>
+    <td><strong>可访问性</strong></td>
+    <td>是否有 alt 属性、role 标注、键盘导航？</td>
+  </tr>
+  <tr>
+    <td><strong>响应式</strong></td>
+    <td>移动端是否可用？断点是否合理？</td>
+  </tr>
+  <tr>
+    <td><strong>性能</strong></td>
+    <td>图片是否懒加载？列表是否有 key？</td>
+  </tr>
+  <tr>
+    <td><strong>设计一致性</strong></td>
+    <td>是否遵循了 DESIGN.md 的 Token？颜色/字体是否硬编码？</td>
+  </tr>
+</table>
+
+<div class="banner banner-warning">
+  <strong>⚠️ 记住：Stitch 的代码是"脚手架级"的</strong>
+  <p>Stitch 生成的 HTML/CSS 是功能性起点，不是生产级代码。它的强项是<strong>视觉设计</strong>，不是代码质量。</p>
+  <p>Claude Code 的强项是<strong>代码精化</strong>——类型、重构、API 集成、状态管理。</p>
+  <p>两者互补，不是替代。</p>
+</div>
+
+<h2 id="project-advanced">进阶方向</h2>
+
+<p>流水线搭好后，还可以往这些方向扩展：</p>
+
+<table>
+  <tr>
+    <th>方向</th>
+    <th>怎么做</th>
+  </tr>
+  <tr>
+    <td><strong>CI/CD 集成</strong></td>
+    <td>用 Stitch SDK 在 CI 中批量生成设计稿，自动截图对比</td>
+  </tr>
+  <tr>
+    <td><strong>Claude Code workflow 编排</strong></td>
+    <td>用 Claude Code 的 workflow 自动化整个流水线（参考 CC L4）</td>
+  </tr>
+  <tr>
+    <td><strong>Antigravity IDE 集成</strong></td>
+    <td>Stitch + Antigravity 提供更深度的 MCP 集成体验</td>
+  </tr>
+  <tr>
+    <td><strong>多页网站生成</strong></td>
+    <td>用 <code>stitch-loop</code> skill 从单个 prompt 生成完整多页网站</td>
+  </tr>
+  <tr>
+    <td><strong>Plugin 发布</strong></td>
+    <td>把你的流水线打包为 Claude Code plugin 分享给团队</td>
+  </tr>
+</table>
+
+<h2 id="project-practice">动手练习</h2>
+
+<div class="exercise">
+  <h3>🎯 练习：跑一次完整的 Design-to-Code 流水线</h3>
+
+  <p><strong>步骤：</strong></p>
+
+  <ol class="steps">
+    <li>
+      <strong>选一个真实需求</strong>
+      <p>选你项目中一个需要新页面的功能——登录页、仪表盘、设置页都可以。</p>
+    </li>
+    <li>
+      <strong>准备 DESIGN.md</strong>
+      <p>如果你的项目已经有设计规范，用 Stitch 的"从 URL 提取"或 <code>stitch::extract-design-md</code> 生成 DESIGN.md。</p>
+    </li>
+    <li>
+      <strong>在 Stitch 中生成设计</strong>
+      <p>使用 L2 的结构化提示词方法，生成页面设计。</p>
+    </li>
+    <li>
+      <strong>导出 + Claude Code 精化</strong>
+      <p>导出 HTML，让 Claude Code 审查、重构、加类型、集成到你的项目中。</p>
+    </li>
+    <li>
+      <strong>对比前后</strong>
+      <p>比较直接使用 Stitch 导出代码 vs 经过 Claude Code 精化后的代码质量差异。</p>
+    </li>
+  </ol>
+</div>
+
+<h2 id="project-summary">课程总结</h2>
+
+<div class="banner banner-success">
+  <strong>🎉 恭喜！你完成了全部 6 节 Stitch 课程！</strong>
+  <ul>
+    <li>L1: Stitch 基础 → AI UI 设计入门</li>
+    <li>L2: 提示词工程 → 从"能看"到"精准"</li>
+    <li>L3: DESIGN.md → 设计系统即代码</li>
+    <li>L4: Stitch SDK → 编程式 UI 生成</li>
+    <li>L5: Stitch MCP + Claude Code → 设计+代码协同</li>
+    <li>L6: 实战 Design-to-Code → 完整流水线</li>
+  </ul>
+</div>
+
+<h2 id="reading">课后推荐阅读</h2>
+
+<ul>
+  <li><a href="https://stitch.withgoogle.com/docs" target="_blank">官方文档</a> — Stitch 完整文档</li>
+  <li><a href="https://github.com/google-labs-code/stitch-sdk" target="_blank">Stitch SDK GitHub</a> — TypeScript SDK 源码</li>
+  <li><a href="https://github.com/google-labs-code/stitch-skills" target="_blank">stitch-skills GitHub</a> — Agent 技能库</li>
+  <li><a href="https://codelabs.developers.google.com/design-to-code-with-antigravity-stitch" target="_blank">Design-to-Code Codelab</a> — Google 官方教程</li>
+</ul>
+
+<h2>继续深入</h2>
+
+<ul>
+
+<h2>📌 别忘了</h2>
+<p>有任何问题随时问我——不管是 Stitch 的细节、Claude Code 的集成、还是流水线的改进。</p>
+<p>两个课程都学完了，你现在既能<strong>定制 Claude Code</strong>（hooks/skills/agents/workflows），又能<strong>用 Stitch 做设计</strong>并和代码无缝衔接——这是一套完整的 AI 辅助开发能力。</p>
+
+<script src="../../assets/nav.js"></script>
+</body>
+</html>

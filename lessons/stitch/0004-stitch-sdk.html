@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stitch L4: Stitch SDK — 编程式 UI 生成</title>
+  <link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">Stitch · Lesson 4 / 6</div>
+  <h1 class="lesson-title">Stitch SDK</h1>
+  <p class="lesson-subtitle">编程式 UI 生成</p>
+</div>
+
+<blockquote>
+  前三课你都是通过 Stitch 网页界面操作的。这一课将带你进入<strong>程序员的主场</strong>——用 TypeScript 代码调用 Stitch 的能力，
+  把 UI 生成集成到你的开发工作流中。
+</blockquote>
+
+<h2 id="sdk-intro">SDK 概览</h2>
+
+<p>
+  <code>@google/stitch-sdk</code> 是 Google 开源的 TypeScript 库（Apache 2.0 许可），让你通过代码调用 Stitch 的全部能力：
+  创建项目、生成屏幕、编辑设计、导出 HTML 和截图。
+</p>
+
+<div class="info-box">
+  <strong>💡 和网页版的区别</strong>
+  <p><strong>网页版 Stitch</strong> — 手动操作，适合探索和快速原型</p>
+  <p><strong>Stitch SDK</strong> — 编程调用，适合自动化、批量生成、集成到 CI/CD</p>
+  <p>两者互通——网页版创建的项目 SDK 也能访问，反之亦然。</p>
+</div>
+
+<h2 id="sdk-setup">安装和初始化</h2>
+
+<pre><code>npm install @google/stitch-sdk</code></pre>
+
+<p>需要 API 密钥，设置为环境变量：</p>
+
+<pre><code>export STITCH_API_KEY="your-api-key"</code></pre>
+
+<p>在代码中使用：</p>
+
+<pre><code>import { stitch } from "@google/stitch-sdk";
+
+// 单例模式，自动读取 STITCH_API_KEY
+const project = stitch.project("your-project-id");
+const screen = await project.generate("一个登录页面");
+const html = await screen.getHtml();</code></pre>
+
+<h2 id="sdk-core">核心类与方法</h2>
+
+<table>
+  <tr>
+    <th>类</th>
+    <th>方法</th>
+    <th>说明</th>
+  </tr>
+  <tr>
+    <td rowspan="2"><strong>Stitch</strong></td>
+    <td><code>stitch.projects()</code></td>
+    <td>列出所有项目</td>
+  </tr>
+  <tr>
+    <td><code>stitch.project(id)</code></td>
+    <td>按 ID 引用项目</td>
+  </tr>
+  <tr>
+    <td rowspan="5"><strong>Project</strong></td>
+    <td><code>project.generate(prompt, deviceType?)</code></td>
+    <td>根据提示词生成屏幕</td>
+  </tr>
+  <tr>
+    <td><code>project.screens()</code></td>
+    <td>列出项目所有屏幕</td>
+  </tr>
+  <tr>
+    <td><code>project.getScreen(screenId)</code></td>
+    <td>获取特定屏幕</td>
+  </tr>
+  <tr>
+    <td><code>project.createDesignSystem(ds)</code></td>
+    <td>创建设计系统</td>
+  </tr>
+  <tr>
+    <td><code>project.listDesignSystems()</code></td>
+    <td>列出设计系统</td>
+  </tr>
+  <tr>
+    <td rowspan="4"><strong>Screen</strong></td>
+    <td><code>screen.edit(prompt)</code></td>
+    <td>通过提示词编辑屏幕</td>
+  </tr>
+  <tr>
+    <td><code>screen.variants(prompt, options)</code></td>
+    <td>生成设计变体</td>
+  </tr>
+  <tr>
+    <td><code>screen.getHtml()</code></td>
+    <td>获取 HTML 下载 URL</td>
+  </tr>
+  <tr>
+    <td><code>screen.getImage()</code></td>
+    <td>获取截图下载 URL</td>
+  </tr>
+  <tr>
+    <td rowspan="2"><strong>DesignSystem</strong></td>
+    <td><code>ds.update(designSystem)</code></td>
+    <td>更新设计系统</td>
+  </tr>
+  <tr>
+    <td><code>ds.apply(screens)</code></td>
+    <td>应用到指定屏幕</td>
+  </tr>
+</table>
+
+<h2 id="sdk-device">设备类型</h2>
+
+<p><code>generate()</code> 和 <code>edit()</code> 支持指定目标设备：</p>
+
+<table>
+  <tr>
+    <th>值</th>
+    <th>说明</th>
+  </tr>
+  <tr><td><code>"MOBILE"</code></td><td>移动端布局</td></tr>
+  <tr><td><code>"DESKTOP"</code></td><td>桌面端布局</td></tr>
+  <tr><td><code>"TABLET"</code></td><td>平板布局</td></tr>
+  <tr><td><code>"AGNOSTIC"</code></td><td>自适应布局</td></tr>
+</table>
+
+<h2 id="sdk-variants">变体生成</h2>
+
+<p><code>variants()</code> 可以从一个屏幕生成多个设计方向：</p>
+
+<pre><code>const variants = await screen.variants(
+  "让它更适合企业用户",
+  {
+    variantCount: 3,        // 生成数量 (1-5)
+    creativeRange: "EXPLORE", // REFINE / EXPLORE / REIMAGINE
+    aspects: ["COLOR_SCHEME", "LAYOUT"],
+  }
+);</code></pre>
+
+<table>
+  <tr>
+    <th>参数</th>
+    <th>可选值</th>
+    <th>说明</th>
+  </tr>
+  <tr>
+    <td><code>variantCount</code></td>
+    <td>1-5</td>
+    <td>变体数量</td>
+  </tr>
+  <tr>
+    <td><code>creativeRange</code></td>
+    <td><code>REFINE</code> / <code>EXPLORE</code> / <code>REIMAGINE</code></td>
+    <td>微调 / 探索 / 重新想象</td>
+  </tr>
+  <tr>
+    <td><code>aspects</code></td>
+    <td><code>LAYOUT</code>, <code>COLOR_SCHEME</code>, <code>IMAGES</code>, <code>TEXT_FONT</code>, <code>TEXT_CONTENT</code></td>
+    <td>要变化的维度</td>
+  </tr>
+</table>
+
+<h2 id="sdk-error">错误处理</h2>
+
+<p>SDK 方法失败时抛出 <code>StitchError</code>：</p>
+
+<pre><code>import { StitchError } from "@google/stitch-sdk";
+
+try {
+  const screen = await project.generate("...");
+} catch (e) {
+  if (e instanceof StitchError) {
+    console.error(e.code);    // AUTH_FAILED, RATE_LIMITED, 等
+    console.error(e.message); // 人类可读的描述
+    console.error(e.recoverable); // 是否可重试
+  }
+}</code></pre>
+
+<table>
+  <tr>
+    <th>错误码</th>
+    <th>说明</th>
+  </tr>
+  <tr><td><code>AUTH_FAILED</code></td><td>API 密钥无效</td></tr>
+  <tr><td><code>RATE_LIMITED</code></td><td>配额超限</td></tr>
+  <tr><td><code>NOT_FOUND</code></td><td>项目/屏幕不存在</td></tr>
+  <tr><td><code>PERMISSION_DENIED</code></td><td>无权限</td></tr>
+  <tr><td><code>NETWORK_ERROR</code></td><td>网络问题</td></tr>
+  <tr><td><code>VALIDATION_ERROR</code></td><td>参数错误</td></tr>
+  <tr><td><code>UNKNOWN_ERROR</code></td><td>其他错误</td></tr>
+</table>
+
+<h2 id="sdk-ai">AI 框架集成</h2>
+
+<p>SDK 原生支持与主流 AI 框架集成：</p>
+
+<h3>Vercel AI SDK</h3>
+<pre><code>import { stitchTools } from "@google/stitch-sdk/ai";
+import { generateText } from "ai";
+
+const tools = stitchTools({
+  include: ["create_project", "generate_screen_from_text", "get_screen"]
+});
+
+const result = await generateText({
+  model: yourModel,
+  tools,
+  prompt: "帮我创建一个登录页面项目",
+});</code></pre>
+
+<h3>Google ADK</h3>
+<pre><code>import { stitchAdkTools } from "@google/stitch-sdk/adk";</code></pre>
+
+<h2 id="sdk-practice">动手练习</h2>
+
+<div class="exercise">
+  <h3>🎯 练习：用 SDK 生成一个屏幕并导出</h3>
+
+  <p><strong>步骤：</strong></p>
+
+  <ol class="steps">
+    <li>
+      <strong>安装 SDK</strong>
+      <pre><code>mkdir stitch-demo && cd stitch-demo
+npm init -y
+npm install @google/stitch-sdk
+# 设置环境变量
+# set STITCH_API_KEY=your-api-key</code></pre>
+    </li>
+    <li>
+      <strong>写一个脚本生成屏幕</strong>
+      <p>创建 <code>generate.mjs</code>：</p>
+<pre><code>import { stitch } from "@google/stitch-sdk";
+
+const project = stitch.project("你的项目ID");
+const screen = await project.generate(
+  "一个简洁的登录页面，蓝色主色调，邮箱密码输入框",
+  "DESKTOP"
+);
+
+const html = await screen.getHtml();
+const image = await screen.getImage();
+
+console.log("HTML:", html);
+console.log("截图:", image);</code></pre>
+    </li>
+    <li>
+      <strong>生成变体对比</strong>
+      <p>扩展脚本，用 <code>variants()</code> 生成三个不同配色方案并截图保存。</p>
+    </li>
+  </ol>
+</div>
+
+<h2 id="sdk-summary">本课关键要点</h2>
+
+<div class="banner banner-success">
+  <strong>💡 核心记忆点</strong>
+  <ul>
+    <li>Stitch SDK = 用 TypeScript 代码调用 Stitch 的全部能力</li>
+    <li>核心 API：generate()、edit()、variants()、getHtml()、getImage()</li>
+    <li>变体生成支持 REFINE / EXPLORE / REIMAGINE 三档创作范围</li>
+    <li>设备类型：MOBILE / DESKTOP / TABLET / AGNOSTIC</li>
+    <li>原生集成 Vercel AI SDK 和 Google ADK</li>
+    <li>错误处理用 StitchError，检查 code / message / recoverable</li>
+  </ul>
+</div>
+
+<h2>课后推荐阅读</h2>
+
+<ul>
+  <li><a href="0003-stitch-designmd.html">回顾 L3：DESIGN.md</a></li>
+  <li><a href="https://github.com/google-labs-code/stitch-sdk" target="_blank">Stitch SDK GitHub</a></li>
+  <li><a href="../../reference/stitch-glossary.html">Stitch 术语速查表</a></li>
+</ul>
+
+<h2>📌 别忘了</h2>
+<p>SDK 让你可以把 UI 生成集成到自动化流程中——比如 CI 中批量生成设计稿、配合 Claude Code 自动生成页面、或者做成内部工具。</p>
+<p>下一课讲<strong>Stitch MCP + Claude Code 集成</strong>——把你学的 Claude Code 知识和 Stitch 连起来。</p>
+
+<script src="../../assets/nav.js"></script>
+</body>
+</html>

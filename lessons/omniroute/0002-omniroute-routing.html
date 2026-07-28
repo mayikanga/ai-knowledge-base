@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OmniRoute L2: 路由策略 — 智能调度你的模型</title>
+  <link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">OmniRoute · Lesson 2 / 6</div>
+  <h1 class="lesson-title">路由策略</h1>
+  <p class="lesson-subtitle">智能调度你的模型</p>
+</div>
+
+<blockquote>L1 你启动了 OmniRoute，知道了它是一个 AI 交换机。这一课讲<strong>交换机怎么决定把请求发给谁</strong>——18 种路由策略，从最简单的"按顺序"到最智能的"多模型融合"。</blockquote>
+
+<h2 id="auto">Auto-Combo：零配置智能路由</h2>
+<p>把模型设为 <code>auto</code>，OmniRoute 会自动从已连接的提供商中构建一个组合，基于 12 个因素实时打分选择：</p>
+<table>
+  <tr><th>模型 ID</th><th>优化目标</th></tr>
+  <tr><td><code>auto</code></td><td>平衡默认（LKGP — 保持上次成功的提供商）</td></tr>
+  <tr><td><code>auto/coding</code></td><td>代码生成优先质量</td></tr>
+  <tr><td><code>auto/fast</code></td><td>最低延迟</td></tr>
+  <tr><td><code>auto/cheap</code></td><td>最低价格</td></tr>
+  <tr><td><code>auto/smart</code></td><td>质量优先 + 10% 探索</td></tr>
+</table>
+
+<h2 id="strategies">18 种路由策略速览</h2>
+<table>
+  <tr><th>策略</th><th>行为</th><th>适用场景</th></tr>
+  <tr><td><code>priority</code></td><td>按优先级列表顺序，用尽再切</td><td>有明确偏好的提供商</td></tr>
+  <tr><td><code>fill-first</code></td><td>填满一个目标配额再切</td><td>想用尽免费额度</td></tr>
+  <tr><td><code>weighted</code></td><td>按权重随机分配</td><td>负载按比例分布</td></tr>
+  <tr><td><code>round-robin</code></td><td>轮询循环</td><td>均匀分配</td></tr>
+  <tr><td><code>cost-optimized</code></td><td>最低价格优先</td><td>成本敏感场景</td></tr>
+  <tr><td><code>headroom</code></td><td>剩余配额最多的优先</td><td>避免配额耗尽</td></tr>
+  <tr><td><code>latency-first</code></td><td>最低延迟优先</td><td>实时交互</td></tr>
+  <tr><td><code>lkgp</code></td><td>粘着上次成功的提供商</td><td>稳定性优先</td></tr>
+  <tr><td><code>fusion</code></td><td>多模型投票，裁判合成</td><td>关键决策</td></tr>
+  <tr><td><code>pipeline</code></td><td>链式处理，一个输出给下一个</td><td>多步骤工作流</td></tr>
+</table>
+
+<h2 id="combo">配置组合（Combo）</h2>
+<p>你可以把多个模型串成一个"组合"，定义故障转移链：</p>
+<pre><code>omniroute combo create my-stack \
+  --model gpt-4o \
+  --fallback claude-sonnet-4.5 \
+  --fallback auto/coding</code></pre>
+<p>使用组合：在工具中把模型设为 <code>my-stack</code>。</p>
+
+<h2 id="fusion">Fusion 策略</h2>
+<p>同时发给多个模型，让裁判模型合成最佳答案：</p>
+<pre><code>omniroute combo create code-review \
+  --strategy fusion \
+  --model gpt-5:claude-opus-5:gemini-3-pro \
+  --fusion-judge claude-sonnet-4.5</code></pre>
+
+<h2 id="resilience">三層韧性</h2>
+<table>
+  <tr><th>层</th><th>范围</th><th>作用</th></tr>
+  <tr><td>断路器</td><td>整个提供商</td><td>上游失败时停止请求，自动探测恢复</td></tr>
+  <tr><td>连接冷却</td><td>一个账号/密钥</td><td>限流的密钥跳过，其他密钥继续服务</td></tr>
+  <tr><td>模型锁定</td><td>提供商+模型</td><td>单个模型配额耗尽隔离，不影响整体</td></tr>
+</table>
+
+<h2 id="practice">动手练习</h2>
+<div class="exercise">
+  <h3>🎯 创建一个组合</h3>
+  <ol class="steps">
+    <li><strong>查看可用提供商</strong><pre><code>omniroute providers list</code></pre></li>
+    <li><strong>创建一个 3 层组合</strong><pre><code>omniroute combo create daily-coding \
+  --model auto/coding \
+  --fallback auto/cheap \
+  --fallback auto/offline</code></pre></li>
+    <li><strong>测试组合</strong><p>在对话中选择模型 <code>daily-coding</code>，观察 OmniRoute 如何路由。</p></li>
+  </ol>
+</div>
+
+<h2>关键要点</h2>
+<div class="banner banner-success">
+  <ul>
+    <li>Auto-Combo 零配置即可智能路由（12 因素实时打分）</li>
+    <li>Combo 可以串联多个模型作为故障转移链</li>
+    <li>Fusion 策略让多个模型投票，裁判合成最佳答案</li>
+    <li>三层韧性机制（断路器/冷却/锁定）确保高可用</li>
+    <li>用 <code>omniroute combo</code> 命令管理组合</li>
+  </ul>
+</div>
+
+<h2>课后推荐阅读</h2>
+<ul>
+  <li><a href="https://github.com/diegosouzapw/OmniRoute" target="_blank">GitHub 仓库</a> — 完整路由策略文档</li>
+  <li><a href="https://omniroute.online" target="_blank">官网</a> — 路由策略配置指南</li>
+</ul>
+
+<p>下一课讲<strong>Token 压缩</strong>——节省 95% Token 的秘诀。</p>
+<script src="../../assets/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Matt Pocock L2: 核心技能实操 — Grill / TDD / Review</title>
+  <link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">Matt Pocock · Lesson 2 / 3</div>
+  <h1 class="lesson-title">核心技能实操</h1>
+  <p class="lesson-subtitle">Grill / TDD / Review 三板斧</p>
+</div>
+
+<blockquote>
+  三个最常用的技能：<strong>/grill-with-docs</strong>（需求对齐）、<strong>/tdd</strong>（测试驱动开发）、<strong>/code-review</strong>（代码审查）。
+  这三个覆盖了"想清楚 → 写对 → 保证质量"的完整链路。
+</blockquote>
+
+<h2 id="grill">/grill-with-docs：面试式需求梳理</h2>
+<p>
+  <strong>这是 Matt Pocock 最受欢迎的技能</strong>，解决"Agent 没做对"的根本原因——需求没对齐。
+</p>
+
+<div class="info-box">
+  <strong>💡 原理</strong>
+  <p>不直接让 agent 写代码，而是先让它<strong>面试你</strong>——追问需求的每个细节，直到双方对"要做什么"达成共识。</p>
+</div>
+
+<h3>它会做什么</h3>
+<ol>
+  <li>追问你的需求，层层深入，不放过模糊之处</li>
+  <li>建立项目的<strong>领域模型</strong>（核心概念和术语）</li>
+  <li>更新 <code>CONTEXT.md</code>（项目共享语言文档）</li>
+  <li>生成或更新 ADR（架构决策记录）</li>
+</ol>
+
+<h3>效果</h3>
+<table>
+  <tr><th>之前</th><th>之后</th></tr>
+  <tr><td>Agent 用 20 个词描述一个概念</td><td>项目有统一的术语表，1 个词就够了</td></tr>
+  <tr><td>每次会话 Agent 重新理解项目</td><td>CONTEXT.md 让 Agent 快速进入状态</td></tr>
+  <tr><td>变量/函数命名不一致</td><td>领域语言驱动命名，代码自文档化</td></tr>
+  <tr><td>Agent 消耗大量 Token 揣测意图</td><td>需求对齐后 Token 消耗大幅降低</td></tr>
+</table>
+
+<div class="banner banner-success">
+  <strong>🔑 CONTEXT.md</strong> 是 Matt Pocock 说的"这个仓库里最酷的技术"——一份共享语言文档，让 agent 理解项目的领域术语，少说废话。
+</div>
+
+<h2 id="tdd">/tdd：红-绿-重构</h2>
+<p>
+  TDD 不是新概念，但让 AI 按 TDD 循环工作能大幅提升代码质量。
+  这个技能把"红-绿-重构"循环编码为 AI 的工作协议。
+</p>
+
+<h3>流程</h3>
+<pre><code>🔴  RED — 先写测试（测试失败）
+    让 agent 理解"什么算完成"
+
+🟢  GREEN — 写刚好能让测试通过的代码
+    不追求完美，只求通过
+
+🔵  REFACTOR — 重构代码
+    现在才优化实现，测试保证没改坏</code></pre>
+
+<p>关键点：<strong>一次只做一个垂直切片</strong>——每次循环只增加一小块功能，测试通过后再继续。</p>
+
+<div class="banner banner-warning">
+  <strong>⚠️ 常见错误</strong>
+  <p>让 AI 先写实现再补测试 = 错过了 TDD 的核心价值。</p>
+  <p>/tdd 强制"先测试后实现"的顺序，这才是 TDD 的精髓。</p>
+</div>
+
+<h2 id="review">/code-review：双轴审查</h2>
+<p>
+  这个技能的特别之处是<strong>用并行 subagent 做双轴审查</strong>：
+</p>
+
+<table>
+  <tr><th>轴</th><th>审查什么</th><th>由谁执行</th></tr>
+  <tr><td><strong>Standards 轴</strong></td><td>编码规范、Martin Fowler 代码坏味道</td><td>一个 subagent</td></tr>
+  <tr><td><strong>Spec 轴</strong></td><td>功能是否按规格实现了</td><td>另一个 subagent</td></tr>
+</table>
+
+<p>两个 subagent 并行工作，互不污染——审查结果再汇总给你。</p>
+
+<div class="info-box">
+  <strong>💡 这和 Claude Code 进阶 L3、L4 的关系</strong>
+  <p>你在 Claude Code 进阶课学过 subagent（L3）和 workflow 编排（L4）。
+  /code-review 其实就是<strong>一个实时的、轻量的 workflow</strong>——两个并行 agent 各审一个维度。</p>
+  <p>Matt Pocock 用 subagent 做代码审查的思路，和你学过的 Adversarial Review 模式（L5）是一样的。</p>
+</div>
+
+<h2 id="practice">动手练习</h2>
+<div class="exercise">
+  <h3>🎯 跑一遍完整链路</h3>
+  <ol class="steps">
+    <li><strong>需求梳理</strong><p>在 Claude Code 中输入 <code>/grill-with-docs</code>，然后告诉它你想实现的一个功能。体验它的追问过程。</p></li>
+    <li><strong>TDD 实现</strong><p>用 <code>/implement</code> 驱动 <code>/tdd</code> 来构建刚才需求中的核心逻辑。观察红-绿-重构循环。</p></li>
+    <li><strong>代码审查</strong><p>实现完成后，运行 <code>/code-review</code>。看看两个 subagent 分别从标准和规格角度审查的结果。</p></li>
+    <li><strong>对比</strong><p>对比"直接让 Claude 写"和"走完这三步"的输出质量差异。</p></li>
+  </ol>
+</div>
+
+<h2>关键要点</h2>
+<div class="banner banner-success">
+  <ul>
+    <li>/grill-with-docs = 面试式需求梳理，先对齐再动手</li>
+    <li>/tdd = 红-绿-重构循环，一次一个垂直切片</li>
+    <li>/code-review = 双轴并行审查，标准和规格各一个 subagent</li>
+    <li>三个技能连起来 = 想清楚 → 写对 → 保证质量</li>
+  </ul>
+</div>
+
+<h2>课后推荐阅读</h2>
+<ul>
+  <li><a href="https://github.com/mattpocock/skills" target="_blank">GitHub 仓库</a> — /grill-with-docs、/tdd、/code-review 源码</li>
+  <li><a href="https://www.pragprog.com/titles/tpp20/" target="_blank">《The Pragmatic Programmer》</a> — 需求对齐和反馈循环的理念来源</li>
+</ul>
+
+<p>下一课讲<strong>进阶技巧</strong>——handoff / wayfinder / architecture improvement。</p>
+<script src="../../assets/nav.js"></script>
+</body>
+</html>

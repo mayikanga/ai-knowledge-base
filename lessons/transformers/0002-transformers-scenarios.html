@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transformers L2: 常用场景 — 7 个实战任务</title>
+  <link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">Transformers · Lesson 2 / 4</div>
+  <h1 class="lesson-title">常用场景</h1>
+  <p class="lesson-subtitle">7 个实战任务</p>
+</div>
+
+<blockquote>
+  L1 知道了 pipeline 是什么。这课直接上手<strong>7 个最常见任务</strong>——文本分类、生成、翻译、摘要、问答、实体识别、零样本分类。
+  每个都有完整的可运行代码。
+</blockquote>
+
+<h2 id="text-classification">1. 文本分类</h2>
+<pre><code>from transformers import pipeline
+
+分类器 = pipeline("text-classification", model="distilbert-base-uncased-finetuned-sst-2-english")
+
+# 单条
+print(分类器("I love this product!"))
+# [{'label': 'POSITIVE', 'score': 0.999}]
+
+# 批量
+文本列表 = ["This is great", "I hate it", "It's okay I guess"]
+结果 = 分类器(文本列表)
+for 文本, 结果 in zip(文本列表, 结果):
+    print(f"{文本} → {结果['label']} ({结果['score']:.2f})")</code></pre>
+
+<h2 id="generation">2. 文本生成</h2>
+<pre><code>from transformers import pipeline
+
+生成器 = pipeline("text-generation", model="gpt2")
+
+结果 = 生成器(
+    "Once upon a time",
+    max_length=50,          # 生成的最大长度
+    num_return_sequences=3, # 返回 3 个不同结果
+    temperature=0.8,        # 创造力（越高越随机）
+    do_sample=True,         # 采样（否则每次都一样）
+)
+for i, 结果 in enumerate(结果):
+    print(f"--- 生成 {i+1} ---")
+    print(结果['generated_text'])</code></pre>
+
+<h2 id="translation">3. 翻译</h2>
+<pre><code>from transformers import pipeline
+
+# 英译中
+翻译器 = pipeline("translation", model="Helsinki-NLP/opus-mt-en-zh")
+print(翻译器("Artificial intelligence is transforming the world"))
+# [{'translation_text': '人工智能正在改变世界'}]
+
+# 法译英
+翻译器2 = pipeline("translation", model="Helsinki-NLP/opus-mt-fr-en")
+print(翻译器2("Je suis très heureux"))
+# [{'translation_text': 'I am very happy'}]</code></pre>
+
+<div class="banner banner-warning">
+  <strong>⚠️ 翻译模型比较大，首次运行需要下载几百 MB。CPU 上也可以跑，稍慢。</strong>
+</div>
+
+<h2 id="summarization">4. 摘要</h2>
+<pre><code>from transformers import pipeline
+
+摘要器 = pipeline("summarization", model="facebook/bart-large-cnn")
+
+长文 = """
+The US has announced a major breakthrough in nuclear fusion research,
+achieving a net energy gain for the first time in history.
+Scientists at the Lawrence Livermore National Laboratory used
+192 lasers to compress a hydrogen fuel pellet to extreme temperatures
+and pressures, triggering a fusion reaction that produced more energy
+than was used to initiate it. This milestone could pave the way for
+clean, virtually unlimited energy in the future.
+"""
+print(摘要器(长文, max_length=50, min_length=20))
+# [{'summary_text': 'US scientists achieved net energy gain in nuclear fusion...'}]</code></pre>
+
+<h2 id="qa">5. 问答</h2>
+<pre><code>from transformers import pipeline
+
+问答器 = pipeline("question-answering", model="distilbert-base-cased-distilled-squad")
+
+上下文 = """
+Hugging Face is a French-American company founded in 2016 by Clément Delangue,
+Julien Chaumond, and Thomas Wolf. It develops tools for natural language processing
+and machine learning. The company is best known for its Transformers library,
+which provides thousands of pre-trained models.
+"""
+结果 = 问答器(
+    question="Hugging Face 是什么时候成立的？",
+    context=上下文
+)
+print(f"答案: {结果['answer']} (置信度: {结果['score']:.2f})")
+# 答案: 2016 (置信度: 0.98)
+</code></pre>
+
+<h2 id="ner">6. 命名实体识别</h2>
+<pre><code>from transformers import pipeline
+
+识别器 = pipeline("ner", model="dslim/bert-base-NER", aggregation_strategy="simple")
+
+文本 = "Elon Musk founded SpaceX in 2002 and is the CEO of Tesla."
+结果 = 识别器(文本)
+for 实体 in 结果:
+    print(f"  {实体['entity_group']}: {实体['word']} (位置 {实体['start']}-{实体['end']})")
+#  PER: Elon Musk
+#  ORG: SpaceX
+#  ORG: Tesla</code></pre>
+
+<h2 id="zero-shot">7. 零样本分类</h2>
+<pre><code>from transformers import pipeline
+
+零样本 = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+
+文本 = "I want to learn Python because I'm interested in data science"
+候选标签 = ["编程", "烹饪", "旅游", "音乐"]
+
+结果 = 零样本(文本, candidate_labels=候选标签)
+print(f"文本: {文本}")
+for 标签, 分数 in zip(结果['labels'], 结果['scores']):
+    print(f"  {标签}: {分数:.2f}")
+# 编程: 0.98
+# 旅游: 0.01
+# ...</code></pre>
+
+<h2 id="practice">动手练习</h2>
+<div class="exercise">
+  <h3>🎯 选三个任务跑一遍</h3>
+  <ol class="steps">
+    <li><strong>文本分类</strong><p>用中文测试情感分析（有些模型支持中文，如 "lxyuan/distilbert-base-multilingual-cased-sentiments-student"）</p></li>
+    <li><strong>问答</strong><p>找一段你熟悉的文章，问几个问题看看回答是否准确。</p></li>
+    <li><strong>零样本分类</strong><p>用你自己的文本和自定义标签测试。<br>比如：一篇新闻稿，标签=["科技", "体育", "政治", "经济"]</p></li>
+  </ol>
+</div>
+
+<h2>课后推荐阅读</h2>
+<ul>
+  <li><a href="https://huggingface.co/models" target="_blank">Hugging Face Model Hub</a> — 搜索所有可用模型</li>
+  <li><a href="https://huggingface.co/docs/transformers/task_summary" target="_blank">官方任务总览</a> — 每个任务对应的 pipeline 参数</li>
+  <li><a href="0001-transformers-basics.html">回顾 L1: Transformers 基础</a></li>
+</ul>
+
+<p>下一课讲<strong>原理</strong>——Tokenizer、AutoClass、模型架构。</p>
+<script src="../../assets/nav.js"></script>
+</body>
+</html>

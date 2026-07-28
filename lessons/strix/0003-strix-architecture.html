@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Strix L3: 架构与原理 — 多 Agent 编排与自动修复</title>
+  <link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">Strix · Lesson 3 / 3</div>
+  <h1 class="lesson-title">架构与原理</h1>
+  <p class="lesson-subtitle">多 Agent 编排与自动修复</p>
+</div>
+
+<blockquote>
+  前两课你学会了 Strix 怎么用。这课深入<strong>它是怎么工作的</strong>——多 agent 图编排、沙箱隔离、真实 PoC 验证、自动修复生成。
+  理解架构后你就能更好地配置和扩展它。
+</blockquote>
+
+<h2 id="architecture">Graph of Agents 架构</h2>
+<p>
+  Strix 的核心是一个<strong>多 agent 图编排</strong>系统——不同专长的 AI agent 组成一个有向图，协作完成渗透测试。
+</p>
+
+<pre><code>你的应用（代码 / URL）
+     ↓
+┌─ 侦察 Agent ────────┐  子域名枚举、指纹识别、端点发现
+│  Recon Agent         │  扫描攻击面
+└─────────┬───────────┘
+          ↓ 共享发现
+┌─ 注入测试 Agent ────┐  SQL/XSS/命令注入测试
+│  Injection Agent     │  基于侦察结果定向测试
+└─────────┬───────────┘
+          ↓ 共享发现
+┌─ 验证 Agent ────────┐  生成 PoC 验证漏洞
+│  Validation Agent    │  不是假阳性，是真的能复现
+└─────────┬───────────┘
+          ↓
+┌─ 报告 Agent ────────┐  生成报告 + 自动修复 PR
+│  Report Agent        │  CVSS 评分 + OWASP 分类
+└──────────────────────┘</code></pre>
+
+<div class="info-box">
+  <strong>💡 和 Claude Code Workflow 的相似之处</strong>
+  <p>你在 CC L4 学的 workflow 也是多 agent 编排——只是 Strix 把它用在了渗透测试领域。</p>
+  <p>Strix 的 Graph of Agents 相当于一个<strong>专为安全测试设计的 workflow</strong>，agent 之间共享发现、动态协调。</p>
+</div>
+
+<h2 id="isolation">沙箱隔离</h2>
+<p>所有 agent 活动都在 Docker 沙箱中执行：</p>
+<table>
+  <tr><th>组件</th><th>作用</th></tr>
+  <tr><td>HTTP 拦截代理 (Caido)</td><td>拦截和修改请求/响应</td></tr>
+  <tr><td>浏览器自动化</td><td>测试 XSS、CSRF、点击劫持</td></tr>
+  <tr><td>Python 运行时</td><td>执行自定义利用代码</td></tr>
+  <tr><td>Shell 终端</td><td>命令执行和系统操作</td></tr>
+</table>
+<p>沙箱确保：<strong>本地处理，数据不发送到外部</strong>——你的代码和流量只在沙箱内流动。</p>
+
+<h2 id="validation">真实 PoC 验证</h2>
+<p>
+  Strix 与传统扫描器的最大区别：<strong>每个发现都经过验证</strong>。
+</p>
+<table>
+  <tr><th></th><th>传统扫描器</th><th>Strix</th></tr>
+  <tr><td>检测方式</td><td>规则匹配</td><td>AI 动态分析</td></tr>
+  <tr><td>结果</td><td>可能有假阳性</td><td>可工作的 PoC</td></tr>
+  <tr><td>验证</td><td>人工复查</td><td>自动验证</td></tr>
+  <tr><td>修复</td><td>手动修复</td><td>AI 生成修复 PR</td></tr>
+</table>
+
+<h2 id="autofix">自动修复</h2>
+<p>Strix 不仅能发现问题，还能生成修复代码——作为可直接合并的 Pull Request：</p>
+<pre><code>漏洞发现 (SQL注入)
+  → AI 分析根因
+  → 生成修复代码（参数化查询）
+  → 创建修复 PR
+  → 你只需审核合并</code></pre>
+
+<h2 id="continuous">持续学习</h2>
+<p>Strix 在多次扫描间积累经验：</p>
+<ul>
+  <li><strong>适应代码库</strong> — 理解项目的架构和常见模式</li>
+  <li><strong>减少误报</strong> — 从过去的误报中学习</li>
+  <li><strong>共享上下文</strong> — 多个 agent 之间共享发现的上下文</li>
+</ul>
+
+<h2 id="platform">托管平台 vs 自托管</h2>
+<table>
+  <tr><th></th><th>CLI（你已学的）</th><th>托管平台 app.strix.ai</th></tr>
+  <tr><td>部署</td><td>本地 Docker</td><td>云平台</td></tr>
+  <tr><td>界面</td><td>终端</td><td>Web 仪表板</td></tr>
+  <tr><td>CI/CD</td><td>GitHub Actions</td><td>原生集成</td></tr>
+  <tr><td>持续监控</td><td>手动触发</td><td>自动持续扫描</td></tr>
+  <tr><td>成本</td><td>仅 API 费用</td><td>平台订阅 + API 费用</td></tr>
+</table>
+
+<h2 id="practice">动手练习</h2>
+<div class="exercise">
+  <h3>🎯 对比测试</h3>
+  <ol class="steps">
+    <li><strong>准备一个有漏洞的测试项目</strong><p>用 <code>DVWA</code>（Damn Vulnerable Web Application）或 <code>Juice Shop</code> 跑一个本地实例。</p></li>
+    <li><strong>用传统扫描器先扫</strong><p>比如 <code>nikto</code> 或 <code>zap</code> 扫同一目标，记录结果。</p></li>
+    <li><strong>用 Strix 扫</strong><pre><code>strix --target http://localhost:8080</code></pre></li>
+    <li><strong>对比差异</strong><p>比较两边的发现数量、假阳性率、可操作性。</p></li>
+  </ol>
+</div>
+
+<h2>课程总结</h2>
+<div class="banner banner-success">
+  <strong>🎉 3 课完成！</strong>
+  <ul>
+    <li><strong>L1:</strong> 安装配置 + 基本扫描</li>
+    <li><strong>L2:</strong> 高级扫描 + 认证测试 + CI/CD 集成</li>
+    <li><strong>L3:</strong> 多 agent 图编排 + 沙箱 + PoC 验证 + 自动修复</li>
+  </ul>
+  <p>你现在可以用 Strix 自动化安全测试，集成到 CI/CD，让 AI agent 帮你发现和修复漏洞。</p>
+</div>
+
+<h2>课后推荐阅读</h2>
+<ul>
+  <li><a href="https://github.com/usestrix/strix" target="_blank">GitHub 仓库</a> — 架构文档和源码</li>
+  <li><a href="https://strix.ai" target="_blank">Strix 官网</a> — 云平台和文档</li>
+  <li><a href="https://github.com/tghastings/strix-claude-code" target="_blank">strix-claude-code</a> — Claude CLI 版 Strix</li>
+</ul>
+
+<h2>继续深入</h2>
+<ul>
+  <li><a href="https://github.com/usestrix/strix" target="_blank">GitHub 仓库</a></li>
+  <li><a href="https://strix.ai" target="_blank">官网</a></li>
+  <li><a href="https://pypi.org/project/strix-agent/" target="_blank">PyPI 包</a></li>
+  <li><a href="https://github.com/tghastings/strix-claude-code" target="_blank">strix-claude-code（Claude CLI 版）</a></li>
+</ul>
+
+<p>有任何问题随时问我！</p>
+<script src="../../assets/nav.js"></script>
+</body>
+</html>

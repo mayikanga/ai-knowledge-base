@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>yt-dlp L1: 基础 — 全能命令行音视频下载器</title>
+  <link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">yt-dlp · Lesson 1 / 2</div>
+  <h1 class="lesson-title">yt-dlp 基础</h1>
+  <p class="lesson-subtitle">全能命令行音视频下载器</p>
+</div>
+
+<blockquote>
+  yt-dlp 是目前最强大的命令行视频下载工具——支持 YouTube、Bilibili、Twitter/X、TikTok 等<strong>上千个网站</strong>，
+  可自由选择画质、提取音频、下载字幕、处理播放列表。
+</blockquote>
+
+<h2 id="intro">什么是 yt-dlp？</h2>
+<p>
+  yt-dlp 是 <code>youtube-dl</code> 的活跃维护分支，用 Python 编写，支持从上千个网站下载视频和音频。
+  它是<strong>命令行工具</strong>——没有 GUI，但功能远超任何图形界面下载器。
+</p>
+
+<div class="info-box">
+  <strong>💡 核心能力</strong>
+  <p>一条命令就能：选画质 → 下载 → 自动合并 → 加字幕 → 提取音频 → 重命名文件</p>
+</div>
+
+<h2 id="install">安装</h2>
+<pre><code># pip 安装（推荐）
+pip install yt-dlp
+
+# Windows 独立 exe
+# 下载 yt-dlp.exe 放到 PATH 目录即可
+
+# 检查版本
+yt-dlp --version</code></pre>
+
+<p>依赖：<strong>ffmpeg</strong>（用于合并视频+音频、提取音频等）</p>
+<pre><code># 检查 ffmpeg 是否已安装
+ffmpeg -version</code></pre>
+
+<p>如果没有 ffmpeg：<code>winget install ffmpeg</code>（Windows）或 <code>brew install ffmpeg</code>（Mac）</p>
+
+<h2 id="basic">基本下载</h2>
+<pre><code># 下载最佳画质
+yt-dlp "视频URL"
+
+# 列出所有可用画质
+yt-dlp -F "视频URL"
+
+# 指定画质下载（例：选 1080p 视频 + 最佳音频）
+yt-dlp -f "bestvideo[height<=1080]+bestaudio/best" "URL"
+
+# 下载音频并转为 MP3
+yt-dlp -x --audio-format mp3 "URL"</code></pre>
+
+<h2 id="format">格式选择详解</h2>
+<table>
+  <tr><th>命令</th><th>含义</th></tr>
+  <tr><td><code>-f best</code></td><td>最佳单一文件（含音视频）</td></tr>
+  <tr><td><code>-f bestvideo+bestaudio</code></td><td>最佳视频 + 最佳音频（自动合并）</td></tr>
+  <tr><td><code>-f "bestvideo[height<=1080]+bestaudio"</code></td><td>1080p 封顶</td></tr>
+  <tr><td><code>-f "bestvideo[ext=mp4]+bestaudio"</code></td><td>MP4 格式的视频</td></tr>
+  <tr><td><code>-f 137+140</code></td><td>按 format code 指定（先用 -F 查看）</td></tr>
+  <tr><td><code>-x --audio-format mp3</code></td><td>提取为 MP3 音频</td></tr>
+  <tr><td><code>--audio-quality 0</code></td><td>最佳音频质量（0=最好，9=最差）</td></tr>
+</table>
+
+<h2 id="output">输出命名</h2>
+<pre><code># 默认命名：视频标题.mp4
+# 自定义命名模板
+yt-dlp -o "%(title)s - %(id)s.%(ext)s" "URL"
+
+# 按上传者分类存储
+yt-dlp -o "%(uploader)s/%(title)s.%(ext)s" "URL"
+
+# 播放列表索引 + 标题
+yt-dlp -o "%(playlist_index)02d - %(title)s.%(ext)s" "PLAYLIST_URL"</code></pre>
+
+<table>
+  <tr><th>变量</th><th>说明</th></tr>
+  <tr><td><code>%(title)s</code></td><td>视频标题</td></tr>
+  <tr><td><code>%(id)s</code></td><td>视频 ID</td></tr>
+  <tr><td><code>%(ext)s</code></td><td>文件扩展名</td></tr>
+  <tr><td><code>%(uploader)s</code></td><td>上传者</td></tr>
+  <tr><td><code>%(upload_date)s</code></td><td>上传日期 (YYYYMMDD)</td></tr>
+  <tr><td><code>%(playlist_index)s</code></td><td>播放列表序号</td></tr>
+  <tr><td><code>%(duration)s</code></td><td>视频时长（秒）</td></tr>
+</table>
+
+<h2 id="practice">动手练习</h2>
+<div class="exercise">
+  <h3>🎯 下载你的第一个视频</h3>
+  <ol class="steps">
+    <li><strong>安装 yt-dlp</strong><pre><code>pip install yt-dlp</code></pre></li>
+    <li><strong>查看可选画质</strong><pre><code>yt-dlp -F "https://www.youtube.com/watch?v=dQw4w9WgXcQ"</code></pre></li>
+    <li><strong>下载 720p MP4</strong><pre><code>yt-dlp -f "bestvideo[height<=720][ext=mp4]+bestaudio" "视频URL"</code></pre></li>
+    <li><strong>提取音频</strong><pre><code>yt-dlp -x --audio-format mp3 -o "%(title)s.%(ext)s" "视频URL"</code></pre></li>
+  </ol>
+</div>
+
+<h2>课后推荐阅读</h2>
+<ul>
+  <li><a href="https://github.com/yt-dlp/yt-dlp" target="_blank">GitHub 仓库</a> — 源码、Issues、更新日志</li>
+  <li><a href="https://github.com/yt-dlp/yt-dlp#readme" target="_blank">官方 README</a> — 完整使用说明</li>
+</ul>
+
+<p>下一课讲<strong>进阶用法</strong>——播放列表、字幕、Cookies、配置。</p>
+<script src="../../assets/nav.js"></script>
+</body>
+</html>

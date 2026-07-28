@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stitch L1: Stitch 基础 — AI 时代的 UI 设计</title>
+  <link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+
+<aside class="course-nav" aria-label="课程目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">Stitch · Lesson 1 / 6</div>
+  <h1 class="lesson-title">Stitch 基础</h1>
+  <p class="lesson-subtitle">AI 时代的 UI 设计</p>
+</div>
+
+<blockquote>
+  Stitch 是 Google Labs 推出的免费 AI UI 设计工具。你只需要用自然语言描述你想要什么界面，它就能生成高保真的设计稿——并导出为 Figma、HTML/CSS、React 代码。
+  对于熟悉 Claude Code 的你来说，Stitch 补上了"设计"这块拼图：Claude Code 写代码，Stitch 做设计。
+</blockquote>
+
+<h2 id="stitch-intro">什么是 Stitch？</h2>
+
+<p>
+  Stitch 是一个<strong>浏览器端的 AI 驱动 UI 设计工具</strong>，Google Labs 出品（前身是 Galileo AI，2025 年 Google I/O 上更名发布）。
+  它能从文字描述、图片甚至手绘草稿生成高保真的 Web 和移动端界面，并附带可直接用的前端代码。
+</p>
+
+<div class="info-box">
+  <strong>💡 Stitch 的定位</strong>
+  <p>传统流程：设计稿 (Figma) → 前端开发 → 代码<br>
+  Stitch 的流程：文字描述 → <strong>设计稿 + 代码同时出</strong></p>
+  <p>它不替代 Figma（你可以导出到 Figma），也不替代 Claude Code（代码仍需精化），而是<strong>让"从想法到设计"这一步变得极快</strong>。</p>
+</div>
+
+<h2 id="stitch-two-modes">两种模式</h2>
+
+<p>Stitch 提供两种生成模式，覆盖不同的质量和速度需求：</p>
+
+<table>
+  <tr>
+    <th>维度</th>
+    <th>Standard 模式</th>
+    <th>Experimental 模式</th>
+  </tr>
+  <tr>
+    <td>底层模型</td>
+    <td>Gemini 3 Flash</td>
+    <td>Gemini 3 Pro</td>
+  </tr>
+  <tr>
+    <td>速度</td>
+    <td>⚡ 快（秒级）</td>
+    <td>🐢 慢但质量高</td>
+  </tr>
+  <tr>
+    <td>输入方式</td>
+    <td>文字提示</td>
+    <td>文字提示 + 图片/手绘上传</td>
+  </tr>
+  <tr>
+    <td>导出方式</td>
+    <td>Figma + HTML/CSS + React</td>
+    <td>HTML/CSS + React（无 Figma）</td>
+  </tr>
+  <tr>
+    <td>月度配额</td>
+    <td>~350 次生成</td>
+    <td>~50 次生成</td>
+  </tr>
+  <tr>
+    <td>适合场景</td>
+    <td>快速迭代、多方案探索</td>
+    <td>最终稿、高保真输出</td>
+  </tr>
+</table>
+
+<div class="banner banner-warning">
+  <strong>⚠️ 提示：</strong>日常先用 Standard 模式快速迭代，最后出最终稿时切到 Experimental 模式，这样配额最经用。
+</div>
+
+<h2 id="stitch-canvas">无限画布与多屏工作流</h2>
+
+<p>2026 年 3 月的重大更新引入了<strong>无限画布</strong>（Infinite Canvas）：</p>
+
+<ul>
+  <li><strong>多屏共存</strong>——可以并排看多个设计方向</li>
+  <li><strong>一次生成最多 5 屏</strong>——描述一个完整流程，Stitch 一次生成所有页面</li>
+  <li><strong>交互原型</strong>——把多个屏幕连接起来，点击预览用户流转</li>
+  <li><strong>设计分支</strong>——在同一个画布里探索不同方案，保留历史</li>
+  <li><strong>语音控制（预览）</strong>——直接说话修改设计</li>
+</ul>
+
+<h2 id="stitch-vibe">Vibe Design 理念</h2>
+
+<p>Stitch 引入了一个有趣的概念叫 <strong>Vibe Design</strong>（氛围设计）：</p>
+
+<blockquote>
+  不是说"我想要一个顶部导航栏+左侧边栏+右侧内容区"，而是说<strong>"我想要一个冥想 app，感觉像周日上午的小木屋"</strong>。
+</blockquote>
+
+<p>两种设计思维：</p>
+
+<table>
+  <tr>
+    <th>传统方式（组件驱动）</th>
+    <th>Vibe Design（意图驱动）</th>
+  </tr>
+  <tr>
+    <td>列出每个 UI 组件</td>
+    <td>描述感觉和目标</td>
+  </tr>
+  <tr>
+    <td>"导航栏、搜索框、卡片列表"</td>
+    <td>"一个简洁的电商首页，像 Apple Store 的干净感"</td>
+  </tr>
+  <tr>
+    <td>准确但缺乏创意</td>
+    <td>AI 帮你诠释，可能有惊喜</td>
+  </tr>
+</table>
+
+<p>实际使用中，两者结合最佳：先 Vibe 找感觉，再组件驱动精调细节。</p>
+
+<h2 id="stitch-workflow">核心工作流</h2>
+
+<p>用 Stitch 做一个设计通常会经历这 5 步：</p>
+
+<ol>
+  <li><strong>登录</strong> — stitch.withgoogle.com，用 Google 账号免费使用</li>
+  <li><strong>选目标和模式</strong> — Web 还是 Mobile？Standard 还是 Experimental？</li>
+  <li><strong>写提示词</strong> — 描述你想要的界面（越详细越好）</li>
+  <li><strong>迭代精调</strong> — 用对话侧栏、语音、局部提示窗微调</li>
+  <li><strong>导出</strong> — 到 Figma、HTML/CSS、React、ZIP，或通过 MCP 发给 Claude Code</li>
+</ol>
+
+<h2 id="stitch-export">导出选项</h2>
+
+<table>
+  <tr>
+    <th>导出目标</th>
+    <th>Standard</th>
+    <th>Experimental</th>
+    <th>用途</th>
+  </tr>
+  <tr>
+    <td>Figma</td>
+    <td>✅ Auto Layout + 命名图层</td>
+    <td>❌</td>
+    <td>设计师接着精修</td>
+  </tr>
+  <tr>
+    <td>HTML/CSS</td>
+    <td>✅</td>
+    <td>✅</td>
+    <td>静态页面 / 原型</td>
+  </tr>
+  <tr>
+    <td>React + Tailwind</td>
+    <td>✅</td>
+    <td>✅</td>
+    <td>直接集成到项目</td>
+  </tr>
+  <tr>
+    <td>Google AI Studio</td>
+    <td>✅</td>
+    <td>✅</td>
+    <td>进一步 AI 处理</td>
+  </tr>
+  <tr>
+    <td>ZIP 下载</td>
+    <td>✅</td>
+    <td>✅</td>
+    <td>离线保存</td>
+  </tr>
+  <tr>
+    <td>Antigravity IDE</td>
+    <td>✅（需 MCP）</td>
+    <td>✅（需 MCP）</td>
+    <td>全栈开发</td>
+  </tr>
+  <tr>
+    <td>Claude Code / Cursor</td>
+    <td>✅（需 MCP + stitch-skills）</td>
+    <td>✅（需 MCP + stitch-skills）</td>
+    <td>AI 编码工作流</td>
+  </tr>
+</table>
+
+<h2 id="stitch-practice">动手练习</h2>
+
+<div class="exercise">
+  <h3>🎯 练习：用 Stitch 生成你的第一个屏幕</h3>
+
+  <p><strong>场景：</strong>为一个 SaaS 产品生成注册页面。</p>
+
+  <p><strong>步骤：</strong></p>
+
+  <ol class="steps">
+    <li>
+      <strong>打开 Stitch</strong>
+      <p>访问 <a href="https://stitch.withgoogle.com" target="_blank">stitch.withgoogle.com</a>，用你的 Google 账号登录。</p>
+    </li>
+    <li>
+      <strong>选择 Web + Standard 模式</strong>
+      <p>这会消耗一次生成配额，但速度快，适合第一次尝试。</p>
+    </li>
+    <li>
+      <strong>输入提示词</strong>
+      <p>试试这个结构化提示（中文也一样有效）：</p>
+<pre><code>一个叫 TaskFlow 的项目管理工具的 SaaS 注册页面。
+- 简洁现代的设计，蓝色主色调 (#4361ee)
+- 顶部：Logo + "开始免费试用"标题
+- 中间：邮箱输入框、密码输入框、"立即开始"按钮
+- 底部："已有账号？登录"链接
+- 社会化登录按钮：Google、GitHub
+- 最底部信任标识："无需信用卡"
+- 避免：紫色渐变、3D 插画、通用的库存照片</code></pre>
+    </li>
+    <li>
+      <strong>迭代精调</strong>
+      <p>生成后试试在侧栏对话中提修改要求：<br>
+      "把按钮改成圆角"、"换个深色模式"、"加一个用户评价区域"。</p>
+    </li>
+    <li>
+      <strong>导出 HTML</strong>
+      <p>点击 Export → HTML/CSS，看看 Stitch 生成的代码质量如何。<br>
+      和 Claude Code 写的代码对比一下，你会发现 Stitch 更偏"展示层"，逻辑和交互还得靠 Claude Code。</p>
+    </li>
+  </ol>
+</div>
+
+<h2 id="stitch-limits">局限性</h2>
+
+<div class="banner banner-warning">
+  <strong>⚠️ 了解边界才能用好</strong>
+  <ul>
+    <li><strong>单人工具</strong>——没有实时协作功能</li>
+    <li><strong>代码是脚手架级别</strong>——导出的 HTML/CSS/React 是可用的起点，但需要重构、补无障碍、加动态数据</li>
+    <li><strong>提示词敏感</strong>——模糊的描述 = 通用的输出</li>
+    <li><strong>默认真静态</strong>——原型只加了基本的点击流转，没有后端逻辑和状态管理</li>
+    <li><strong>月度配额有限</strong>——Standard 350 次 + Experimental 50 次</li>
+  </ul>
+</div>
+
+<h2 id="stitch-summary">本课关键要点</h2>
+
+<div class="banner banner-success">
+  <strong>💡 核心记忆点</strong>
+  <ul>
+    <li>Stitch = Google Labs 的 AI UI 设计工具，从文字/图片生成界面</li>
+    <li>两种模式：Standard（快、Figma 导出）vs Experimental（高质量、图片输入）</li>
+    <li>Vibe Design：描述"感觉"而不是"组件"，AI 帮你诠释</li>
+    <li>无限画布 + 多屏 + 原型 + 语音，2026 年功能已相当完整</li>
+    <li>导出到 Figma / HTML / React / MCP 给 Claude Code 用</li>
+    <li>代码是脚手架级别——Stitch 做"设计"，Claude Code 做"开发"</li>
+  </ul>
+</div>
+
+<h2>课后推荐阅读</h2>
+
+<ul>
+  <li><a href="https://stitch.withgoogle.com" target="_blank">Stitch 官网</a> — 直接上手体验</li>
+  <li><a href="https://developers.googleblog.com/en/stitch-a-new-way-to-design-uis/" target="_blank">Google 官方博客：Introducing Stitch</a></li>
+  <li><a href="https://zapier.com/blog/google-stitch/" target="_blank">Zapier 评测：What is Google Stitch?</a></li>
+  <li><a href="https://github.com/tygwan/awesome-stitch-design" target="_blank">awesome-stitch-design — 社区资源集合</a></li>
+</ul>
+
+<h2>📌 别忘了</h2>
+<p>有任何不清楚的随时问！尤其是配额策略（350+50 次每月）和导出选项的区别，这些是刚开始最容易搞混的。</p>
+<p>下一课讲<strong>提示词工程</strong>——怎么写出让 Stitch 一次就对的提示词。</p>
+
+<script src="../../assets/nav.js"></script>
+</body>
+</html>

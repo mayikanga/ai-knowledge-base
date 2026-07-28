@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Code 进阶 — 术语速查表</title>
+  <link rel="stylesheet" href="../assets/lesson.css">
+  <style>
+    .glossary-term {
+      margin: 1.25rem 0;
+      padding: 0.75rem 1rem;
+      border-left: 3px solid var(--accent);
+      background: var(--accent-light);
+      border-radius: 0 6px 6px 0;
+    }
+    .glossary-term h3 {
+      margin: 0 0 0.15rem;
+      font-size: 1.05rem;
+    }
+    .glossary-term .aliases {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin: 0.1rem 0 0.3rem;
+    }
+    .glossary-term p {
+      margin: 0.3rem 0;
+    }
+    .glossary-term .see-also {
+      font-size: 0.85rem;
+      margin-top: 0.3rem;
+    }
+  </style>
+</head>
+<body>
+
+<div class="lesson-header">
+  <div class="lesson-number">Reference</div>
+  <h1 class="lesson-title">Claude Code 术语速查表</h1>
+  <p class="lesson-subtitle">本表收录 Claude Code 进阶功能的核心术语。每节课后可以回来查阅。</p>
+</div>
+
+<h2>核心概念</h2>
+
+<div class="glossary-term">
+  <h3>.claude 目录</h3>
+  <p>项目根目录下的配置文件夹，是 Claude Code 所有自定义功能的存放位置。包含 <code>CLAUDE.md</code>、<code>settings.json</code>、<code>skills/</code>、<code>agents/</code>、<code>workflows/</code> 等子目录。</p>
+  <p class="see-also">参见：<a href="https://code.claude.com/docs/en/claude-directory" target="_blank">官方文档</a></p>
+</div>
+
+<div class="glossary-term">
+  <h3>settings.json</h3>
+  <p>Claude Code 的配置文件，可放在 <code>~/.claude/</code>（全局）或 <code>.claude/</code>（项目级）。用于配置 permissions、hooks、环境变量、模型默认值等。</p>
+  <p class="aliases">别名：settings.local.json（项目个人覆盖，被 gitignore）</p>
+</div>
+
+<div class="glossary-term">
+  <h3>CLAUDE.md</h3>
+  <p>项目级指令文件。每次会话启动时加载，告诉 Claude 项目上下文、约定、规则。建议不超过 200 行。</p>
+  <p class="aliases">别名：CLAUDE.md 可放在项目根目录或 <code>.claude/</code> 下</p>
+</div>
+
+<h2>扩展系统</h2>
+
+<div class="glossary-term">
+  <h3>Hook</h3>
+  <p>生命周期事件触发器。在 <code>PreToolUse</code>、<code>PostToolUse</code>、<code>SessionStart</code> 等事件发生时自动执行 command / http / prompt / agent / mcp_tool 动作。是<strong>强制性</strong>的（每次匹配都执行）。</p>
+  <p class="aliases">避免使用：钩子、触发器</p>
+  <p class="see-also">参见：<a href="../lessons/0001-hooks-basics.html">Lesson 1: Hooks 入门</a></p>
+</div>
+
+<div class="glossary-term">
+  <h3>Matcher</h3>
+  <p>Hook 的匹配规则，决定 hook 在哪个工具/事件上触发。支持精确匹配（<code>"Edit|Write"</code>）、通配（<code>"*"</code>）、正则（包含特殊字符时）。</p>
+</div>
+
+<div class="glossary-term">
+  <h3>Skill</h3>
+  <p>可复用的指令包，以 SKILL.md 文件形式存储在 <code>skills/&lt;name&gt;/</code> 目录下。可通过 <code>/skill-name</code> 手动调用，或由 Claude 自动发现并调用（根据 description 匹配）。支持 frontmatter 元数据、参数、上下文隔离运行。</p>
+  <p class="aliases">别名：slash command、指令包</p>
+</div>
+
+<div class="glossary-term">
+  <h3>Command (单文件 skill)</h3>
+  <p>与 skill 类似但是单文件格式（<code>commands/*.md</code>），没有多文件结构。现代推荐使用 skill 格式。</p>
+</div>
+
+<div class="glossary-term">
+  <h3>Subagent / Agent（自定义）</h3>
+  <p>在 <code>agents/*.md</code> 中定义的、拥有独立上下文窗口的专用工作器。支持自定义工具集、模型覆盖、权限模式、持久记忆（memory）、工作树隔离（worktree）。</p>
+  <p class="aliases">避免使用：子Agent、小助手</p>
+</div>
+
+<div class="glossary-term">
+  <h3>Workflow</h3>
+  <p>JavaScript 编排脚本（<code>workflows/*.js</code>），用于协调多个 subagent 按流程执行复杂任务。支持 <code>agent()</code>、<code>parallel()</code>、<code>pipeline()</code> 等 API。由 Claude 在 <code>/workflows</code> 会话中生成。</p>
+</div>
+
+<div class="glossary-term">
+  <h3>MCP (Model Context Protocol)</h3>
+  <p>连接外部服务的协议（数据库、Slack、浏览器 API 等）。通过 MCP servers 可以让 Claude 在会话中直接调用外部工具。</p>
+</div>
+
+<div class="glossary-term">
+  <h3>Plugin</h3>
+  <p>将 skills、hooks、subagents、MCP 打包成可安装单元。跨仓库复用或通过市场分发。</p>
+</div>
+
+<h2>运行模式</h2>
+
+<div class="glossary-term">
+  <h3>Worktree（工作树）</h3>
+  <p>Git 工作树隔离模式。subagent 在独立的临时分支上工作，互不干扰。适用于并行修改文件的场景。</p>
+</div>
+
+<div class="glossary-term">
+  <h3>Fork context（分支上下文）</h3>
+  <p>Skill 的 <code>context: fork</code> 模式，让 skill 在独立的 subagent 上下文中运行，不污染主会话。</p>
+</div>
+
+<div class="glossary-term">
+  <h3>Skill Stacking</h3>
+  <p>多个 skills 同时激活的技能栈模式（v2.1.199+）。允许组合多个技能协作完成复杂任务。</p>
+</div>
+
+<h2>Workflow</h2>
+
+<div class="glossary-term">
+  <h3>agent()</h3>
+  <p>Workflow 脚本中启动 subagent 的函数。支持 label、phase、schema（结构化输出）、model、effort、agentType 等选项。</p>
+  <p class="see-also">参见：<a href="../lessons/0004-workflows.html">Lesson 4: Workflow 编排</a></p>
+</div>
+
+<div class="glossary-term">
+  <h3>parallel()</h3>
+  <p>Workflow 中的并行执行函数。有全局屏障（barrier）——启动所有任务，等全部完成才继续。失败的任务返回 null。</p>
+  <p class="aliases">避免使用：同时执行、并发</p>
+</div>
+
+<div class="glossary-term">
+  <h3>pipeline()</h3>
+  <p>Workflow 中的流水线执行函数。无屏障——每个 item 独立经过所有阶段。总耗时 = 最慢单个 item 耗时。</p>
+  <p class="aliases">避免使用：阶段执行、串行</p>
+</div>
+
+<div class="glossary-term">
+  <h3>phase()</h3>
+  <p>Workflow 的阶段标记函数。将后续 agent() 调用归组到同一阶段，在进度树中显示。</p>
+</div>
+
+<div class="glossary-term">
+  <h3>Barrier（屏障）</h3>
+  <p>等待所有并行任务完成后再继续执行的同步点。parallel() 自带屏障，pipeline() 没有。</p>
+</div>
+
+<div class="glossary-term">
+  <h3>Token Budget（Token 预算）</h3>
+  <p>用户通过 "+500k" 等指令设定的 token 消耗上限。Workflow 脚本中通过 <code>budget.total</code>、<code>budget.spent()</code>、<code>budget.remaining()</code> 访问。</p>
+</div>
+
+<div class="glossary-term">
+  <h3>Meta 块</h3>
+  <p>Workflow 脚本开头的 <code>export const meta = { name, description, phases }</code> 声明。必须是纯字面量。</p>
+</div>
+
+<div class="glossary-term">
+  <h3>Workflow Resume</h3>
+  <p>中断后的 workflow 可恢复执行。已完成步骤返回缓存结果，只重跑新步骤。依赖 <code>Date.now()</code> 和 <code>Math.random()</code> 不可用。</p>
+</div>
+
+<h2>退出码 (Hook)</h2>
+
+<div class="glossary-term">
+  <h3>Exit Code 0</h3>
+  <p>Hook 执行成功 → 放行。</p>
+</div>
+<div class="glossary-term">
+  <h3>Exit Code 1</h3>
+  <p>Hook 执行有警告 → 非阻塞错误，Claude 看到报错但继续执行。</p>
+</div>
+<div class="glossary-term">
+  <h3>Exit Code 2</h3>
+  <p>Hook 阻止操作 → 阻断执行，stderr 反馈给 Claude。</p>
+</div>
+
+<h2>推荐链接</h2>
+
+<ul>
+  <li><a href="https://code.claude.com/docs/en/features-overview" target="_blank">官方文档总入口</a></li>
+  <li><a href="https://code.claude.com/docs/en/claude-directory" target="_blank">.claude 目录详解</a></li>
+  <li><a href="https://code.claude.com/docs/en/configuration" target="_blank">Settings 配置参考</a></li>
+</ul>
+
+</body>
+</html>

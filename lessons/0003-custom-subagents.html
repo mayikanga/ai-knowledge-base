@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lesson 3: 自定义 Subagent — 你的 AI 员工团队</title>
+  <link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">Lesson 3 / 6</div>
+  <h1 class="lesson-title">自定义 Subagent</h1>
+  <p class="lesson-subtitle">你的 AI 员工团队</p>
+</div>
+
+<blockquote>
+  Mission 关联：前两课你学会了<strong>自动化</strong>（hooks）和<strong>复用</strong>（skills）。这一课将教你<strong>分工</strong>——让你的"AI 员工"各自有专长、独立工作，不再什么事都挤在主会话里做。
+</blockquote>
+
+<h2 id="agents-intro">什么是 Subagent？</h2>
+
+<p>
+  Subagent 是 Claude Code 的<strong>隔离工作器</strong>。每个 subagent 拥有独立的上下文窗口、可自定义的工具集、甚至不同的模型和权限。
+  你可以把它想象成"雇了一个专门做某件事的实习生"——你把任务派给他，他独立完成，只把结果汇报给你。
+</p>
+
+<div class="info-box">
+  <strong>💡 为什么需要 Subagent？</strong>
+  <ul>
+    <li><strong>上下文隔离</strong>——脏活累活让 subagent 干，不污染主会话的上下文</li>
+    <li><strong>并行工作</strong>——subagent 可以同时在后台运行</li>
+    <li><strong>专业化</strong>——每个 subagent 有自己的"角色设定"和工具集</li>
+    <li><strong>模型路由</strong>——简单任务扔给 Haiku（便宜又快），复杂任务用 Opus</li>
+  </ul>
+</div>
+
+<h2 id="agents-built-in">内置 Subagent vs 自定义 Agent</h2>
+
+<p>Claude Code 自带一些内置 subagent 类型，你也可以创建自定义的：</p>
+
+<table>
+  <tr>
+    <th>Agent</th>
+    <th>来源</th>
+    <th>用途</th>
+    <th>可自定义？</th>
+  </tr>
+  <tr>
+    <td><code>Explore</code></td>
+    <td>内置</td>
+    <td>只读搜索，快速扫描代码库</td>
+    <td>❌</td>
+  </tr>
+  <tr>
+    <td><code>Plan</code></td>
+    <td>内置</td>
+    <td>架构设计，规划实现方案</td>
+    <td>❌</td>
+  </tr>
+  <tr>
+    <td><code>General-purpose</code></td>
+    <td>内置</td>
+    <td>全能型，默认 agent</td>
+    <td>❌</td>
+  </tr>
+  <tr>
+    <td><strong>自定义 Agent</strong></td>
+    <td><code>agents/*.md</code></td>
+    <td>你想要什么就是什么</td>
+    <td>✅ 全部</td>
+  </tr>
+</table>
+
+<h2 id="agents-location">自定义 Agent 的定义位置</h2>
+
+<p>和 skill 一样，agent 也支持全局和项目两级：</p>
+
+<table>
+  <tr>
+    <th>位置</th>
+    <th>作用域</th>
+    <th>特点</th>
+  </tr>
+  <tr>
+    <td><code>~/.claude/agents/&lt;name&gt;.md</code></td>
+    <td>全局</td>
+    <td>你个人的 AI 员工，跨项目可用</td>
+  </tr>
+  <tr>
+    <td><code>.claude/agents/&lt;name&gt;.md</code></td>
+    <td>项目级</td>
+    <td>可提交到仓库，团队共享</td>
+  </tr>
+</table>
+
+<h2 id="agents-format">Agent 定义文件格式</h2>
+
+<p>每个 agent 是一个 <code>.md</code> 文件，YAML frontmatter 定义元数据，markdown 正文定义它的"角色设定"：</p>
+
+<pre><code>---
+name: code-reviewer
+description: "Review code changes for quality and security"
+tools: Read, Edit, Grep, Bash
+disallowedTools: Write, WebSearch
+model: sonnet
+permissionMode: acceptEdits
+maxTurns: 20
+skills:
+  - security-review
+  - code-style
+mcpServers:
+  - database
+memory: project
+isolation: worktree
+color: cyan
+background: true
+---
+
+你是一个资深的代码审查专家，专注于正确性和安全性。
+
+## 审查原则
+1. 优先发现逻辑错误和安全隐患
+2. 对每一条意见给出具体的代码示例
+3. 用中文输出审查结果
+4. 最后给出总体评分（1-10）和修改建议优先级
+
+## 输出格式
+- **问题**: [严重度: 高/中/低] 问题描述
+- **位置**: 文件名:行号
+- **建议**: 修改方案
+</code></pre>
+
+<h2 id="agents-frontmatter">Frontmatter 字段详解</h2>
+
+<table>
+  <tr>
+    <th>字段</th>
+    <th>必填？</th>
+    <th>说明</th>
+    <th>示例</th>
+  </tr>
+  <tr>
+    <td><code>name</code></td>
+    <td>✅</td>
+    <td>Agent 名称，用于 <code>@name</code> 调用</td>
+    <td><code>code-reviewer</code></td>
+  </tr>
+  <tr>
+    <td><code>description</code></td>
+    <td>✅</td>
+    <td>描述何时使用（Claude 据此自动触发）</td>
+    <td><code>Review code changes...</code></td>
+  </tr>
+  <tr>
+    <td><code>tools</code></td>
+    <td>❌</td>
+    <td>可用的工具列表（逗号分隔）</td>
+    <td><code>Read, Edit, Grep</code></td>
+  </tr>
+  <tr>
+    <td><code>disallowedTools</code></td>
+    <td>❌</td>
+    <td>拒绝使用的工具</td>
+    <td><code>Write</code></td>
+  </tr>
+  <tr>
+    <td><code>model</code></td>
+    <td>❌</td>
+    <td>模型覆盖（haiku / sonnet / opus）</td>
+    <td><code>haiku</code></td>
+  </tr>
+  <tr>
+    <td><code>permissionMode</code></td>
+    <td>❌</td>
+    <td>权限模式</td>
+    <td><code>acceptEdits</code></td>
+  </tr>
+  <tr>
+    <td><code>maxTurns</code></td>
+    <td>❌</td>
+    <td>最大交互轮数</td>
+    <td><code>20</code></td>
+  </tr>
+  <tr>
+    <td><code>skills</code></td>
+    <td>❌</td>
+    <td>此 agent 可用的 skill 列表</td>
+    <td><code>[security-review, code-style]</code></td>
+  </tr>
+  <tr>
+    <td><code>mcpServers</code></td>
+    <td>❌</td>
+    <td>此 agent 可用的 MCP server</td>
+    <td><code>[database]</code></td>
+  </tr>
+  <tr>
+    <td><code>memory</code></td>
+    <td>❌</td>
+    <td>持久记忆作用域</td>
+    <td><code>user | project | local</code></td>
+  </tr>
+  <tr>
+    <td><code>isolation</code></td>
+    <td>❌</td>
+    <td>工作树隔离</td>
+    <td><code>worktree</code></td>
+  </tr>
+  <tr>
+    <td><code>color</code></td>
+    <td>❌</td>
+    <td>终端显示颜色</td>
+    <td><code>cyan | green | yellow</code></td>
+  </tr>
+  <tr>
+    <td><code>background</code></td>
+    <td>❌</td>
+    <td>默认后台运行</td>
+    <td><code>true</code></td>
+  </tr>
+</table>
+
+<h2 id="agents-fields">关键字段深入解读</h2>
+
+<h3>🎯 permissionMode</h3>
+<p>控制 subagent 的权限行为：</p>
+<table>
+  <tr><th>值</th><th>含义</th></tr>
+  <tr><td><code>acceptEdits</code></td><td>自动接受文件修改，无需逐条确认</td></tr>
+  <tr><td><code>acceptAll</code></td><td>允许所有操作</td></tr>
+  <tr><td><em>不设置</em></td><td>每次操作都询问你（默认行为）</td></tr>
+</table>
+
+<h3>🧠 memory</h3>
+<p>让 subagent 跨会话记住信息：</p>
+<table>
+  <tr><th>值</th><th>作用域</th><th>适用场景</th></tr>
+  <tr><td><code>user</code></td><td>你的所有项目</td><td>个人偏好、常用配置</td></tr>
+  <tr><td><code>project</code></td><td>当前项目</td><td>项目特有知识</td></tr>
+  <tr><td><code>local</code></td><td>仅当前会话</td><�>临时记忆，用完即弃</td></tr>
+</table>
+
+<h3>🌳 isolation: worktree</h3>
+<p>让 subagent 在独立的 Git 工作树中工作，实现真正的并行编辑不冲突。<br>
+适合：多个 subagent 同时修改不同文件的场景。完成后会自动提交 + push + 创建 PR。</p>
+
+<h3>🔄 background: true</h3>
+<p>Subagent 默认前台运行。设为 <code>true</code> 后将在后台默默工作，你可以在主会话继续做其他事。</p>
+
+<h3>🧩 skills 与 mcpServers</h3>
+<p>可以给 subagent"注入"特定的技能和外部服务连接。比如一个数据查询 agent 可以自带 <code>database</code> MCP server 的权限。</p>
+
+<h2 id="agents-trigger">Subagent 的触发方式</h2>
+
+<ol>
+  <li><strong>自动触发</strong>——Claude 根据 <code>description</code> 判断当前任务适合哪个 agent，自动启动</li>
+  <li><strong>@ 提及</strong>——在对话中输入 <code>@agent-name 你的任务</code> 手动调用</li>
+  <li><strong>Skill/Workflow 中 spawn</strong>——在 skill 或 workflow 脚本中通过 agent() API 启动</li>
+</ol>
+
+<div class="banner banner-warning">
+  <strong>⚠️ 注意</strong>：自动触发依赖于 <code>description</code> 的精准程度。和 skill 一样，模糊的描述可能导致 Claude 在不该调的时候乱调。
+  如果不希望 agent 被自动触发，可以在 description 中加入"PROACTIVELY"前缀来提示，或者精细控制触发条件。
+</div>
+
+<h2 id="agents-practice">动手练习：创建你的第一个自定义 Agent</h2>
+
+<div class="exercise">
+  <h3>🎯 练习：创建 <code>docs-writer</code> Agent</h3>
+
+  <p><strong>场景：</strong>你希望有一个专门写文档的 agent——它只读代码、写 markdown，不修改源码。</p>
+
+  <p><strong>步骤：</strong></p>
+
+  <ol class="steps">
+    <li>
+      <strong>创建 agent 文件</strong>
+<p>在 <code>~/.claude/agents/docs-writer.md</code>：</p>
+<pre><code>---
+name: docs-writer
+description: "Write and update documentation"
+tools: Read, Grep, Glob, Write, Edit
+disallowedTools: Bash
+model: haiku
+memory: project
+---
+
+你是一个技术文档写手。根据代码生成或更新文档。
+
+## 规则
+1. 只读代码，不改代码
+2. 用中文撰写，清晰简洁
+3. 输出格式：Markdown
+4. 包含使用示例
+
+## 工作流程
+1. 先阅读相关代码文件理解功能
+2. 检查是否已有文档（有则更新，无则新建）
+3. 生成文档，包含：概述、安装/引入方式、API/使用说明、示例代码</code></pre>
+    </li>
+    <li>
+      <strong>测试</strong>
+      <p>在任意项目中，告诉 Claude：<code>@docs-writer 给这个项目的 main 函数写文档</code></p>
+      <p>观察：它是否只读了代码、没改代码、写了文档？</p>
+    </li>
+    <li>
+      <strong>进阶：加上模型路由</strong>
+      <p>文档撰写不费脑，用 <code>model: haiku</code> 就够了（更便宜更快）。<br>
+      但如果是架构设计文档，可以改成 <code>model: sonnet</code>。</p>
+    </li>
+  </ol>
+</div>
+
+<h2 id="agents-nested">Agent 的嵌套调用</h2>
+
+<p>Subagent 内部还可以再启动 subagent（最多 5 层嵌套）。这让你能构建出复杂的协作结构：</p>
+
+<pre><code>你 (主会话)
+└─ @project-audit (审计 agent)
+   ├─ @security-check (安全检查 subagent)
+   ├─ @perf-check (性能检查 subagent)
+   └─ @style-check (风格检查 subagent)
+      └─ @eslint-helper (ESLint 规则咨询 subagent)  ← 嵌套的第三层</code></pre>
+
+<div class="banner banner-success">
+  <strong>💡 实操建议：</strong>嵌套最常用在"一个 agent 发现任务太复杂，自己拆成子任务分给更专业的 agent"的场景。但别过度嵌套——2-3 层一般就够了。
+</div>
+
+<h2 id="agents-compare">Subagent vs Skill: 何时用哪个？</h2>
+
+<table>
+  <tr>
+    <th></th>
+    <th>Skill</th>
+    <th>Subagent</th>
+  </tr>
+  <tr>
+    <td><strong>上下文</strong></td>
+    <td>共享主会话上下文（或 fork 隔离）</td>
+    <td>完全独立的上下文窗口</td>
+  </tr>
+  <tr>
+    <td><strong>工具</strong></td>
+    <td>通过 allowedTools 限制</td>
+    <td>自定义工具集 + 可禁用工具</td>
+  </tr>
+  <tr>
+    <td><strong>模型</strong></td>
+    <td>可覆盖</td>
+    <td>可覆盖</td>
+  </tr>
+  <tr>
+    <td><strong>记忆</strong></td>
+    <td>无持久记忆</td>
+    <td>支持 user/project/local 持久记忆</td>
+  </tr>
+  <tr>
+    <td><strong>并行</strong></td>
+    <td>串行执行</td>
+    <td>可后台并行运行</td>
+  </tr>
+  <tr>
+    <td><strong>隔离</strong></td>
+    <td>context: fork</td>
+    <td>worktree 物理隔离</td>
+  </tr>
+  <tr>
+    <td><strong>最佳用途</strong></td>
+    <td>复用工作流、快速脚本</td>
+    <td>独立复杂任务、长时间运行、并行处理</td>
+  </tr>
+</table>
+
+<h2 id="agents-best">最佳实践总结</h2>
+
+<ul>
+  <li><strong>最小权限工具</strong>——<code>tools</code> 只给需要的，<code>disallowedTools</code> 阻断危险的</li>
+  <li><strong>精准的 description</strong>——避免 Claude 乱触发。必要时在描述加特定关键词</li>
+  <li><strong>任务匹配模型</strong>——读文件用 haiku（省），写代码用 sonnet（稳），审架构用 opus（深）</li>
+  <li><strong>后台运行 + 通知</strong>——<code>background: true</code> 让 agent 默默干活不打断你</li>
+  <li><strong>worktree 隔离</strong>——多个 agent 同时改文件时必备，不会互相踩</li>
+  <li><strong>定期审视 memory</strong>——agent 的记忆会累积，偶尔看看它记住了什么</li>
+</ul>
+
+<h2 id="agents-reading">课后推荐阅读</h2>
+
+<ul>
+  <li><a href="https://code.claude.com/docs/en/claude-directory" target="_blank">官方：.claude 目录详解（Agents 部分）</a></li>
+  <li><a href="https://code.claude.com/docs/en/features-overview" target="_blank">官方：Extend Claude Code — Subagents 部分</a></li>
+  <li><a href="../reference/glossary.html">术语速查表</a></li>
+</ul>
+
+<h2>📌 别忘了</h2>
+<p>有任何问题随时问！Subagent 是 Claude Code 进阶中最强大的功能之一，理解透彻了后面学 workflow 会非常轻松。</p>
+
+<p><strong>学完这课你就有自己的 AI 员工了</strong>——试试给不同任务创建不同的 agent，体验一下"当领导"的感觉 😎</p>
+
+<script>
+  (() => { const button = document.querySelector('.course-nav__toggle'); button.addEventListener('click', () => { const collapsed = document.body.classList.toggle('nav-collapsed'); button.setAttribute('aria-expanded', String(!collapsed)); button.setAttribute('aria-label', collapsed ? '展开目录' : '收起目录'); }); })();
+</script>
+<script src="../assets/nav.js"></script>
+</body>
+</html>
