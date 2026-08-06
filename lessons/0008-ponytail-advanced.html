@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 2: Ponytail 进阶 — 日常场景实战</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+
+<aside class="course-nav" aria-label="本课目录">
+  <button class="course-nav__toggle" type="button" aria-label="收起目录" aria-expanded="true"></button>
+  <span class="course-nav__label"></span>
+  <ol class="course-nav__list"></ol>
+</aside>
+
+<div class="lesson-header">
+  <div class="lesson-number">Ponytail · Lesson 2 / 2</div>
+  <h1 class="lesson-title">Ponytail 进阶</h1>
+  <p class="lesson-subtitle">Review 审查、Audit 审计、Debt 追踪、Caveman 搭配、子代理规则</p>
+</div>
+
+<blockquote>
+  <strong>Mission 关联：</strong>第一课你学会了 Ponytail 是什么、怎么装、四种模式怎么切换。这一课把这些知识变成<strong>日常习惯</strong>——在真实项目中使用 review/audit/debt 三个核心命令，搭配 Caveman 控制输出措辞，并让子代理也继承精简规则。
+</blockquote>
+
+<h2 id="ponytail2-review">/ponytail-review：审查当前更改</h2>
+
+<p>这是你日常最常用的命令。写完代码后跑一遍，Ponytail 会分析当前 diff，找出可以精简的部分。你不需要切换模式——review 会自动使用当前模式的标准来判断。</p>
+
+<pre><code>/ponytail-review</code></pre>
+
+<p>它的工作原理是：读取当前所有未提交的更改（相当于 <code>git diff</code> 的范围），逐段检查是否有更简洁的实现方式。输出是一份清单，列出每处可精简的位置和建议：</p>
+
+<pre><code>📋 Ponytail Review — 3 处可精简
+
+1. src/api/users.py:45-52
+   `validate_email()` 函数：标准库 email-validator 已实现
+   → 建议替换为 from email_validator import validate_email
+
+2. src/services/cache.py:12-30
+   `get_cached_user()` 函数：此 API 调用频率 &lt; 1次/分钟
+   → 建议移除缓存层，直接查询数据库
+
+3. src/utils/format.py:5-8
+   `format_date()` 函数：datetime.strftime 原生支持
+   → 建议删除此函数，直接调用 .strftime("%Y-%m-%d")</code></pre>
+
+<p>每条建议都标注了文件名和行号，方便你直接定位。建议分为三类：</p>
+
+<table>
+  <tr><th>建议类型</th><th>含义</th><th>通常怎么处理</th></tr>
+  <tr><td>🟢 安全精简</td><td>标准库或已有代码已覆盖，删除不影响功能</td><td>直接删除或替换</td></tr>
+  <tr><td>🟡 可优化</td><td>代码可以更简洁，但改动需要验证</td><td>评估后决定，可加 <code>ponytail:</code> 标记推迟</td></tr>
+  <tr><td>🔴 需谨慎</td><td>建议精简幅度大，可能影响其他模块</td><td>仔细审查依赖关系后再改</td></tr>
+</table>
+
+<div class="info-box">
+  <strong>💡 最佳实践</strong>
+  <p>写完一个功能模块后，在提交前跑 <code>/ponytail-review</code>。把 review 结果过一遍，确认每一条——有些建议可能不适合你的场景，但大部分能帮你省下不必要的代码。养成习惯后，提交的代码质量会有明显提升。</p>
+</div>
+
+<h2 id="ponytail2-audit">/ponytail-audit：仓库全面审计</h2>
+
+<p>当你接手一个老项目，或者感觉代码库越来越臃肿时，用 audit 做一次全面体检。它会扫描整个仓库，不只是当前改动：</p>
+
+<pre><code>/ponytail-audit</code></pre>
+
+<p>建议在 <code>ultra</code> 模式下跑 audit，得到最激进的精简建议，然后筛选出真正值得改的部分。</p>
+
+<p>review 和 audit 的核心区别：</p>
+
+<table>
+  <tr><th>对比维度</th><th><code>review</code></th><th><code>audit</code></th></tr>
+  <tr><td>扫描范围</td><td>当前未提交的 diff</td><td>整个仓库</td></tr>
+  <tr><td>使用时机</td><td>每次提交前</td><td>定期维护 / 接手项目时</td></tr>
+  <tr><td>输出量</td><td>几条到十几条</td><td>可能几十上百条</td></tr>
+  <tr><td>建议操作</td><td>立即修改</td><td>分批处理，排优先级</td></tr>
+  <tr><td>运行频率</td><td>高频（每天多次）</td><td>低频（每周或每月）</td></tr>
+</table>
+
+<div class="banner banner-warning">
+  <strong>⚠️ 注意：</strong>audit 输出可能很多。建议按目录分批处理——先修核心模块，外围代码可以打上 <code>ponytail:</code> 标记以后再说。不要试图一次性修复所有问题。
+</div>
+
+<h2 id="ponytail2-debt">/ponytail-debt：技术债追踪</h2>
+
+<p>有时候你想精简某段代码，但当时没时间改——Ponytail 允许你在代码中标记技术债，以后统一处理。标记方式是写 <code>ponytail:</code> 开头的注释：</p>
+
+<pre><code>// 在代码中标记技术债
+def old_api_handler(request):
+    # ponytail: 这个函数可以用 FastAPI 的依赖注入简化
+    # ponytail: 等 v3 重构时一起处理，当前保持兼容
+    return legacy_format(request)
+
+// 另一个例子
+class UserReport:
+    # ponytail: 这个类 90% 的代码可以用 Pandas 的 groupby 替代
+    # ponytail: 但下游有 3 个模块依赖这个类的接口，改之前要统一重构
+    ...</code></pre>
+
+<p>标记语法支持：<code>// ponytail:</code>（JS/TS/C#）、<code># ponytail:</code>（Python/Ruby/YAML）、<code>-- ponytail:</code>（SQL/Lua）、<code>&lt;!-- ponytail: --&gt;</code>（HTML）。任何注释格式都可以，只要包含 <code>ponytail:</code> 前缀。</p>
+
+<p>之后在任何时候运行汇总：</p>
+
+<pre><code>/ponytail-debt</code></pre>
+
+<p>它会扫描所有 <code>ponytail:</code> 注释标记，按文件汇总成一份待办清单：</p>
+
+<table>
+  <tr><th>标记位置</th><th>技术债说明</th></tr>
+  <tr><td>src/api/handlers.py:15</td><td>可以用 FastAPI 依赖注入简化</td></tr>
+  <tr><td>src/api/handlers.py:16</td><td>等 v3 重构时一起处理</td></tr>
+  <tr><td>src/utils/helpers.py:42</td><td>90% 代码可用 Pandas groupby 替代</td></tr>
+</table>
+
+<div class="info-box">
+  <strong>🔑 关键用法</strong>
+  <p>写 <code>ponytail:</code> 标记时尽量说清楚"为什么没改"和"什么时候改"。<code># ponytail: v2 迁移后再精简，当前保持兼容</code> 比 <code># ponytail: 待优化</code> 有用得多。每个月初跑一次 <code>/ponytail-debt</code>，看看积压了多少技术债，决定哪些该在本月还掉。</p>
+</div>
+
+<h2 id="ponytail2-caveman">与 Caveman 搭配使用</h2>
+
+<p>Caveman 是和 Ponytail 互补的工具。两者的分工很清楚：一个让 AI 少写代码，一个让 AI 少说废话。</p>
+
+<table>
+  <tr><th></th><th>Ponytail</th><th>Caveman</th></tr>
+  <tr><td>控制对象</td><td>AI 写的代码</td><td>AI 输出的文字</td></tr>
+  <tr><td>解决什么问题</td><td>不必要的代码</td><td>过度详细的解释</td></tr>
+  <tr><td>典型效果</td><td>代码量 -54%</td><td>输出减少 60-80%</td></tr>
+  <tr><td>是否冲突</td><td colspan="2">不冲突。"Different halves, no overlap"——作者原话</td></tr>
+</table>
+
+<p>可以同时安装两者。Caveman 的安装方式和 Ponytail 类似：</p>
+
+<pre><code>/plugin marketplace add &lt;caveman-repo&gt;
+/plugin install caveman@caveman</code></pre>
+
+<p>两者同时生效时效果很直观：你问一个问题，Caveman 让 AI 只给你最重要的答案（而不是三段式背景介绍+分析+总结），Ponytail 让 AI 写最少量的代码来实现。最终效果就是——"一句话回答问题，一行代码解决问题"。</p>
+
+<p>如果你觉得 AI 太啰嗦但代码量还可以，只装 Caveman。如果你觉得代码太臃肿但解释还行，只装 Ponytail。两者互相独立，互不影响。</p>
+
+<h2 id="ponytail2-subagent">子代理规则注入</h2>
+
+<p>默认情况下，Ponytail 的规则会注入到所有子代理中。这意味着你启动的 <code>@code-reviewer</code>、<code>@docs-writer</code> 等子代理也会继承精简规则。</p>
+
+<p>你也可以通过环境变量精细控制：</p>
+
+<pre><code># 只对名称含 test 的子代理生效
+$env:PONYTAIL_SUBAGENT_MATCHER = ".*test.*"
+
+# 不让任何子代理继承 Ponytail
+$env:PONYTAIL_SUBAGENT_MATCHER = "a^"
+
+# 不设置（默认）：所有子代理都继承</code></pre>
+
+<p>匹配规则基于子代理的定义文件名（agent 的 <code>name</code> 字段）：</p>
+
+<table>
+  <tr><th>子代理名称</th><th>匹配 <code>.*test.*</code></th><th>是否注入规则</th></tr>
+  <tr><td><code>test-runner</code></td><td>✅ 匹配</td><td>是</td></tr>
+  <tr><td><code>code-reviewer</code></td><td>❌ 不匹配</td><td>否</td></tr>
+  <tr><td><code>integration-test</code></td><td>✅ 匹配</td><td>是</td></tr>
+</table>
+
+<p>子代理默认继承主会话当前的模式（full/ultra/lite/off）。如果你想在子代理中用不同模式，可以在子代理启动时指定。</p>
+
+<h2 id="ponytail2-scenarios">场景速查表</h2>
+
+<p>以下是你日常工作流中会遇到的典型场景和对应操作：</p>
+
+<table>
+  <tr><th>场景</th><th>操作</th><th>推荐模式</th></tr>
+  <tr><td>刚写完一个功能，准备提交</td><td><code>/ponytail-review</code></td><td>full</td></tr>
+  <tr><td>接手一个老项目，想清理冗余</td><td><code>/ponytail-audit</code></td><td>ultra</td></tr>
+  <tr><td>看到一段代码暂时不想改</td><td>加 <code># ponytail:</code> 标记</td><td>—</td></tr>
+  <tr><td>汇总所有待办技术债</td><td><code>/ponytail-debt</code></td><td>—</td></tr>
+  <tr><td>AI 解释得太啰嗦</td><td>装 Caveman</td><td>—</td></tr>
+  <tr><td>子代理不需要精简规则</td><td>设置 <code>PONYTAIL_SUBAGENT_MATCHER</code></td><td>—</td></tr>
+  <tr><td>存档前批量检查遗留代码</td><td><code>/ponytail-audit</code> + <code>/ponytail-debt</code></td><td>ultra</td></tr>
+</table>
+
+<h2 id="ponytail2-practice">动手练习：完整工作流</h2>
+
+<div class="exercise">
+  <h3>🎯 练习：用 Ponytail 走一遍日常开发流程</h3>
+  <p><strong>场景：</strong>你在一个项目里刚写完一个新功能，现在用 Ponytail 全套工具做一遍代码精简。如果你手头没有现成的项目，可以创建一个临时文件写一段代码来练习。</p>
+
+  <ol class="steps">
+    <li><strong>写代码</strong>——打开任意项目，写一个简单的函数（比如读取 CSV 做数据统计），或者用你现有的未提交改动</li>
+    <li><strong>Review</strong>——运行 <code>/ponytail-review</code>，查看 Ponytail 建议了哪些精简。至少采纳一条建议，然后再次 review 确认修改生效</li>
+    <li><strong>标记技术债</strong>——在一条暂时不动的代码上加上 <code># ponytail: 之后重构</code> 注释，运行 <code>/ponytail-debt</code> 确认它出现在待办清单中</li>
+    <li><strong>模式对比实验</strong>——先后用 <code>full</code> 和 <code>ultra</code> 模式跑同一个请求，观察 AI 输出的代码差异有多大。ultra 模式会不会剪掉太多？</li>
+  </ol>
+</div>
+
+<div class="banner banner-success">
+  <strong>✅ 本节要点</strong>
+  <ul style="margin:0.5rem 0 0 1.2rem;">
+    <li><code>/ponytail-review</code> — 提交前审查当前 diff，养成习惯</li>
+    <li><code>/ponytail-audit</code> — 全面审计整个仓库，建议 ultra 模式 + 分批处理</li>
+    <li><code>/ponytail-debt</code> + <code>ponytail:</code> 标记 — 追踪推迟处理的技术债，月初跑一次</li>
+    <li>Caveman 控制"说"，Ponytail 控制"做"，互不冲突可同时安装</li>
+    <li><code>PONYTAIL_SUBAGENT_MATCHER</code> — 精细控制哪些子代理继承精简规则</li>
+  </ul>
+</div>
+
+<h2 id="ponytail2-reading">课后推荐阅读</h2>
+
+<ul>
+  <li><a href="https://github.com/DietrichGebert/ponytail" target="_blank">Ponytail GitHub 仓库</a> — Issues 里有很多使用讨论、最佳实践和踩坑记录</li>
+  <li><a href="0007-ponytail-intro.html">上一课：Ponytail 基础</a> — 复习安装、模式切换、决策阶梯</li>
+  <li><a href="../reference/glossary.html">术语速查表</a></li>
+</ul>
+
+<h2>📌 别忘了</h2>
+
+<p>有任何不清楚的地方随时问我！Ponytail 两个核心课就到这里了。如果你想深入某个方向——比如给 Ponytail 提 PR、或者把它移植到其他 AI 工具上——我们也可以继续聊。</p>
+
+<script>
+  (() => { const button = document.querySelector('.course-nav__toggle'); button.addEventListener('click', () => { const collapsed = document.body.classList.toggle('nav-collapsed'); button.setAttribute('aria-expanded', String(!collapsed)); button.setAttribute('aria-label', collapsed ? '展开目录' : '收起目录'); }); })();
+</script>
+<script src="../assets/nav.js"></script>
+</body>
+</html>

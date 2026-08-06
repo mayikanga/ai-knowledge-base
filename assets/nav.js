@@ -87,6 +87,14 @@
         { num: '02', title: '集成与指挥', file: 'open-design/0002-opendesign-integration.html' },
       ],
     },
+    {
+      label: 'Ponytail · 精简代码',
+      filePrefix: '',
+      lessons: [
+        { num: '01', title: 'Ponytail 入门', file: '0007-ponytail-intro.html' },
+        { num: '02', title: 'Ponytail 进阶', file: '0008-ponytail-advanced.html' },
+      ],
+    },
   ];
 
   // ── 判断当前页面信息 ──
