@@ -2,7 +2,7 @@
 
 这是一个基于原生 HTML、CSS 和 JavaScript 构建的静态个人知识库，用课程化页面组织 AI 开发工具、设计工具、音视频工具和模型工具的学习笔记。
 
-在线浏览：[ai-knowledge-base-sooty.vercel.app](https://ai-knowledge-base-sooty.vercel.app)
+在线浏览：[notes.mkang.asia](https://notes.mkang.asia)
 
 开发者指南：[index-developer-guide.md](./index-developer-guide.md)
 
