@@ -12,3 +12,6 @@
 - 系统性地讲，不要零散知识点
 - 每个 lesson 有一个可感知的"胜利"（tangible win）
 - 需要有交互练习，不仅仅是阅读
+
+## Session 记录
+- 2026-07-31: 新增 Ponytail 系列，第一课入门（lessons/0007-ponytail-intro.html）
