@@ -6,6 +6,10 @@
 
 开发者指南：[index-developer-guide.md](./index-developer-guide.md)
 
+## 页面预览
+
+![知识库首页](./screenshots/knowledge-base-home.png)
+
 ## 课程
 
 | # | 课程 | 课时 | 简介 |
