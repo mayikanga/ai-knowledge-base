@@ -10,6 +10,8 @@
 
 ![知识库首页](./screenshots/knowledge-base-home.png)
 
+![OmniRoute 课程页](./screenshots/omniroute-lesson.png)
+
 ## 课程
 
 | # | 课程 | 课时 | 简介 |
